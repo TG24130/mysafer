@@ -1,0 +1,12 @@
+# Dépendances de test uniquement, réinstallables par `npm install`.
+node_modules/
+
+# Rien de ce qui touche à un vrai coffre ne doit entrer dans l'historique.
+*.kdbx
+coffre-*.kdbx
+
+# Sorties d'outils et fichiers temporaires.
+graphify-out/
+*.log
+.DS_Store
+Thumbs.db

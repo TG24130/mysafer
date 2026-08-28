@@ -1,0 +1,13 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Le coffre courant (db.kdbx) et ses copies horodatées (history/…) vivent
+    // tous deux sous users/{uid}/vault/. Le motif {chemin=**} couvre les
+    // sous-dossiers, ce que {fichier} sur un seul segment ne faisait pas.
+    // La restriction qui compte est ailleurs : le chemin contient l'uid, et la
+    // condition exige que ce soit celui du compte connecté.
+    match /users/{uid}/vault/{chemin=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

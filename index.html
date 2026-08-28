@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--
+  CSP stricte : aucun script ni style en ligne, aucune origine externe. Toutes
+  les dépendances sont servies depuis js/vendor/ (voir js/vendor/README.md).
+  `'wasm-unsafe-eval'` est requis par Argon2 en WebAssembly ; c'est une
+  directive bien plus étroite que `'unsafe-eval'`, elle n'autorise pas
+  l'évaluation de chaînes JavaScript.
+  `connect-src` devra être élargi aux domaines Firebase à la phase 4 — et à eux
+  seuls.
+  Note : `frame-ancestors` est inopérant en <meta> ; la protection anti-cadrage
+  est faite en JavaScript dans js/app.js, faute de pouvoir définir des en-têtes
+  sur GitHub Pages.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebasestorage.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#11141b">
+<meta name="color-scheme" content="dark light">
+<title>Coffre</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+<noscript><p class="notice">Ce coffre nécessite JavaScript.</p></noscript>
+
+<!-- Écran de démarrage : création ou déverrouillage -->
+<main id="screen-lock" class="screen" hidden>
+  <div class="lock-card">
+    <h1 class="lock-title">Coffre</h1>
+
+    <form id="form-unlock" hidden autocomplete="off">
+      <p id="unlock-sub" class="lock-sub">Saisissez votre phrase de passe maître.</p>
+      <label class="field">
+        <span class="field-label">Phrase de passe maître</span>
+        <input type="password" id="input-master" autocomplete="current-password"
+               required autofocus>
+      </label>
+      <button type="submit" class="btn btn-primary">Déverrouiller</button>
+    </form>
+
+    <form id="form-create" hidden autocomplete="off">
+      <p class="lock-sub">Aucun coffre sur cet appareil. Créez-en un.</p>
+
+      <div class="gen-master">
+        <button type="button" id="btn-gen-master" class="btn btn-ghost">
+          Générer une phrase de 6 mots
+        </button>
+        <output id="gen-master-out" class="gen-out" hidden></output>
+        <p id="gen-master-hint" class="warn" hidden>
+          Notez-la sur papier avant de continuer. Elle ne peut pas être
+          retrouvée.
+        </p>
+      </div>
+
+      <label class="field">
+        <span class="field-label">Phrase de passe maître</span>
+        <input type="password" id="input-new-master" autocomplete="new-password"
+               required minlength="8">
+      </label>
+      <label class="field">
+        <span class="field-label">Confirmation</span>
+        <input type="password" id="input-new-master2" autocomplete="new-password"
+               required minlength="8">
+      </label>
+      <p class="warn">
+        Cette phrase ne peut pas être réinitialisée. Si elle est perdue, le
+        coffre est définitivement illisible.
+      </p>
+      <button type="submit" class="btn btn-primary">Créer le coffre</button>
+    </form>
+
+    <p id="lock-error" class="error" role="alert" hidden></p>
+    <p id="lock-busy" class="busy" role="status" hidden>Dérivation de la clé…</p>
+
+    <!-- Compte de synchronisation. Facultatif : le coffre s'ouvre et
+         s'utilise sans compte, hors ligne. Se connecter ne sert qu'à
+         retrouver le coffre sur un autre appareil. -->
+    <section class="account" aria-labelledby="account-title">
+      <h2 id="account-title" class="account-title">Synchronisation</h2>
+
+      <p id="account-state" class="account-state" role="status">Non connecté.</p>
+
+      <form id="form-signin" class="signin" hidden autocomplete="on">
+        <label class="field">
+          <span class="field-label">Adresse e-mail</span>
+          <input type="email" id="input-email" autocomplete="username" required>
+        </label>
+        <label class="field">
+          <span class="field-label">Mot de passe du compte</span>
+          <input type="password" id="input-account-password"
+                 autocomplete="current-password" required>
+        </label>
+        <p class="hint">
+          Ce mot de passe n'est pas la phrase de passe maître et ne déchiffre
+          rien. Il sert seulement à retrouver votre coffre en ligne.
+        </p>
+        <button type="submit" class="btn btn-primary">Se connecter</button>
+      </form>
+
+      <button type="button" id="btn-signin-toggle" class="btn btn-ghost btn-block">
+        Se connecter
+      </button>
+      <button type="button" id="btn-signout" class="btn btn-ghost btn-block" hidden>
+        Se déconnecter
+      </button>
+    </section>
+
+    <!-- La page de diagnostic n'était atteignable qu'en tapant son adresse à la
+         main, ce qui est peu praticable sur téléphone — or c'est précisément
+         l'appareil sur lequel elle doit tourner. -->
+    <p class="diag-access">
+      <a href="./diagnostic.html">Diagnostic de cet appareil</a>
+    </p>
+  </div>
+</main>
+
+<!-- Coffre déverrouillé -->
+<div id="screen-vault" class="screen" hidden>
+  <header class="topbar">
+    <button type="button" id="btn-groups" class="btn btn-ghost btn-icon"
+            aria-expanded="false" aria-controls="group-panel">Répertoires</button>
+    <h1 class="topbar-title">Coffre</h1>
+    <span id="sync-status" class="sync-status" role="status"></span>
+  <span id="lock-countdown" class="lock-countdown" role="status"></span>
+    <button type="button" id="btn-lock" class="btn btn-ghost">Verrouiller</button>
+  </header>
+
+  <div class="layout">
+    <!-- Arborescence des répertoires -->
+    <nav id="group-panel" class="group-panel" aria-label="Répertoires">
+      <ul id="group-list" class="group-list"></ul>
+      <button type="button" id="btn-add-group" class="btn btn-ghost btn-block">
+        Nouveau répertoire
+      </button>
+      <!-- Exporter vit ici et non dans la barre du haut : c'est une action de
+           maintenance, pas un geste quotidien, et la barre débordait sur les
+           écrans étroits. -->
+      <p id="export-reminder" class="export-reminder" role="status" hidden></p>
+      <button type="button" id="btn-export" class="btn btn-ghost btn-block">
+        Exporter le coffre
+      </button>
+    </nav>
+
+    <section class="main-panel">
+      <div class="toolbar">
+        <input type="search" id="input-search" class="search" placeholder="Rechercher"
+               autocomplete="off" spellcheck="false">
+        <button type="button" id="btn-add" class="btn btn-primary">Ajouter</button>
+      </div>
+
+      <!-- Deux coffres sans ancêtre commun. On ne tranche pas à la place de
+           l'utilisateur : les deux options détruisent quelque chose. -->
+      <div id="sync-conflict" class="conflict" role="alert" hidden>
+        <h2 class="conflict-title">Deux coffres différents</h2>
+        <p class="conflict-text">
+          Ce coffre n'a jamais été synchronisé, et un autre coffre existe déjà
+          en ligne pour ce compte. Ils n'ont pas d'origine commune : les
+          fusionner n'aurait pas de sens. La synchronisation est suspendue tant
+          que vous n'avez pas choisi.
+        </p>
+        <p class="conflict-text">
+          Exportez d'abord le coffre de cet appareil si vous tenez à son
+          contenu. Dans les deux cas, une copie de ce qui est écrasé est
+          conservée dans l'historique en ligne.
+        </p>
+        <div class="conflict-actions">
+          <button type="button" id="btn-conflict-pull" class="btn btn-primary">
+            Utiliser le coffre en ligne
+          </button>
+          <button type="button" id="btn-conflict-push" class="btn btn-ghost">
+            Remplacer le coffre en ligne
+          </button>
+        </div>
+      </div>
+
+      <p id="clip-status" class="clip-status" role="status" hidden></p>
+      <p id="scope-label" class="scope-label"></p>
+      <ul id="entry-list" class="entry-list"></ul>
+      <p id="entry-empty" class="empty" hidden>Aucune entrée ici.</p>
+    </section>
+  </div>
+</div>
+
+<!-- Détail d'une entrée -->
+<div id="detail" class="detail" hidden role="dialog" aria-modal="true"
+     aria-labelledby="detail-title">
+  <form id="form-detail" class="detail-inner" autocomplete="off">
+    <header class="detail-head">
+      <h2 id="detail-title" class="detail-title">Entrée</h2>
+      <button type="button" id="btn-detail-close" class="btn btn-ghost">Fermer</button>
+    </header>
+
+    <label class="field">
+      <span class="field-label">Titre</span>
+      <input type="text" id="d-title" required>
+    </label>
+
+    <label class="field">
+      <span class="field-label">Identifiant</span>
+      <span class="field-row">
+        <input type="text" id="d-username" autocomplete="off">
+        <button type="button" id="btn-copy-user" class="btn btn-ghost">Copier</button>
+      </span>
+    </label>
+
+    <label class="field">
+      <span class="field-label">Mot de passe</span>
+      <span class="field-row">
+        <input type="password" id="d-password" autocomplete="off">
+        <button type="button" id="btn-reveal" class="btn btn-ghost"
+                aria-pressed="false">Afficher</button>
+        <button type="button" id="btn-copy-pwd" class="btn btn-ghost">Copier</button>
+      </span>
+    </label>
+
+    <div class="gen-row">
+      <button type="button" id="btn-gen-phrase" class="btn btn-ghost">Phrase (6 mots)</button>
+      <button type="button" id="btn-gen-pwd" class="btn btn-ghost">Mot de passe (20)</button>
+      <span id="gen-strength" class="gen-strength"></span>
+    </div>
+
+    <label class="field">
+      <span class="field-label">Adresse</span>
+      <input type="text" id="d-url" autocomplete="off" inputmode="url">
+    </label>
+
+    <label class="field">
+      <span class="field-label">Répertoire</span>
+      <select id="d-group" class="select"></select>
+    </label>
+
+    <label class="field">
+      <span class="field-label">Notes</span>
+      <textarea id="d-notes" rows="4"></textarea>
+    </label>
+
+    <div id="d-custom" class="custom-fields" hidden></div>
+
+    <div class="detail-actions">
+      <button type="button" id="btn-delete" class="btn btn-danger">Supprimer</button>
+      <span class="spacer"></span>
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+    </div>
+  </form>
+</div>
+
+<!-- kdbxweb et argon2-browser sont des bundles UMD : ils posent window.kdbxweb
+     et window.argon2, et doivent être chargés avant les modules ES qui s'en
+     servent. argon2-browser embarque son WebAssembly en base64 : aucun fichier
+     .wasm séparé à servir. -->
+<script src="./js/vendor/kdbxweb.min.js"></script>
+<script src="./js/vendor/argon2-bundled.min.js"></script>
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+Commande a coller dans Google Cloud Shell.
+Lien direct :  https://shell.cloud.google.com/?project=coffre-fort-test
+
+A refaire depuis l'ajout du port 5175 (le serveur de developpement a change de
+port pour echapper a un cache HTTP empoisonne ; voir tools/serve.py).
+
+--- PROJET DE TEST (coffre-fort-test) ---
+
+cat > cors.json <<'FIN'
+[{"origin":["http://localhost:5174","http://127.0.0.1:5174","http://localhost:5175","http://127.0.0.1:5175"],"method":["GET","PUT","POST","DELETE","HEAD"],"responseHeader":["Content-Type","Content-Length","Content-Range","Content-Encoding","Content-Disposition","Authorization","Range","x-goog-resumable","x-goog-meta-app","x-goog-meta-format","x-goog-meta-role"],"maxAgeSeconds":3600}]
+FIN
+gcloud storage buckets update gs://coffre-fort-test.firebasestorage.app --cors-file=cors.json
+gcloud storage buckets describe gs://coffre-fort-test.firebasestorage.app --format="default(cors_config)"
+
+--- PROJET DE PRODUCTION (coffre-fort-ae72c) ---
+A faire au moment du deploiement HTTPS, en remplacant les origines localhost
+par l'adresse GitHub Pages reelle.

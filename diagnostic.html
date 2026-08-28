@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#11141b">
+<meta name="color-scheme" content="dark light">
+<title>Diagnostic — Coffre</title>
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+<main class="diag">
+  <h1 class="diag-title">Diagnostic WebAuthn PRF</h1>
+
+  <p class="diag-intro">
+    Cette page vérifie si cet appareil peut servir au déverrouillage biométrique
+    du coffre. Elle ne touche pas au coffre et ne stocke rien : la clé
+    d'identification créée pour le test peut être supprimée ensuite dans les
+    réglages du système.
+  </p>
+
+  <div id="context" class="diag-block"></div>
+
+  <button type="button" id="btn-run" class="btn btn-primary">Lancer le test</button>
+
+  <p class="diag-note">
+    Le test demandera votre empreinte, votre visage ou votre code d'appareil.
+    C'est attendu : c'est précisément ce qu'on cherche à valider.
+  </p>
+
+  <ol id="results" class="diag-results"></ol>
+
+  <div id="verdict" class="diag-verdict" hidden></div>
+
+  <h2 class="diag-title">Presse-papiers</h2>
+  <p class="diag-intro">
+    Écrire dans le presse-papiers exige un geste récent de l'utilisateur.
+    Ce test vérifie si l'effacement automatique différé fonctionne sur ce
+    navigateur — il doit être lancé par un vrai clic, pas par un script.
+  </p>
+  <button type="button" id="btn-clip" class="btn btn-primary">Tester le presse-papiers</button>
+  <ol id="clip-results" class="diag-results"></ol>
+
+  <h2 class="diag-title">Volume et performance</h2>
+  <p class="diag-intro">
+    Fabrique un coffre de test rempli, puis chronomètre ce qui coûte cher :
+    l'enregistrement, le déverrouillage et la fusion. À lancer sur l'appareil le
+    plus lent que le coffre devra servir — en pratique le téléphone. Rien n'est
+    enregistré : le coffre fabriqué ne vit qu'en mémoire, et votre vrai coffre
+    n'est pas touché.
+  </p>
+  <label class="field">
+    <span class="field-label">Nombre d'entrées</span>
+    <select id="perf-count" class="select">
+      <option value="100">100</option>
+      <option value="500">500</option>
+      <option value="1000" selected>1000</option>
+      <option value="2000">2000</option>
+    </select>
+  </label>
+  <button type="button" id="btn-perf" class="btn btn-primary">Lancer la mesure</button>
+  <p class="diag-note">
+    Comptez de quelques secondes à une minute selon l'appareil. Les calculs
+    Argon2 passent par le même worker que l'application : la page reste
+    réactive, mais ne la quittez pas pendant la mesure.
+  </p>
+  <ol id="perf-results" class="diag-results"></ol>
+  <div id="perf-verdict" class="diag-verdict" hidden></div>
+</main>
+
+<script src="./js/vendor/kdbxweb.min.js"></script>
+<script type="module" src="./js/diagnostic.js"></script>
+</body>
+</html>

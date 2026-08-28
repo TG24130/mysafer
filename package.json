@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "name": "coffre-fort",
+  "type": "module",
+  "description": "Dependances de test uniquement. Rien ici n'est deploye : le site est un ensemble de fichiers statiques et les bibliotheques du navigateur sont vendorees dans js/vendor/.",
+  "devDependencies": {
+    "@xmldom/xmldom": "0.8.10"
+  },
+  "scripts": {
+    "test": "node tests/generator.test.mjs && node tests/vaultModel.test.mjs && node tests/lockTimer.test.mjs && node tests/mergeLogic.test.mjs && node tests/backupPolicy.test.mjs"
+  }
+}

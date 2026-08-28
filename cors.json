@@ -1,0 +1,31 @@
+[
+  {
+    "origin": [
+      "http://localhost:5174",
+      "http://127.0.0.1:5174",
+      "http://localhost:5175",
+      "http://127.0.0.1:5175"
+    ],
+    "method": [
+      "GET",
+      "PUT",
+      "POST",
+      "DELETE",
+      "HEAD"
+    ],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "Content-Range",
+      "Content-Encoding",
+      "Content-Disposition",
+      "Authorization",
+      "Range",
+      "x-goog-resumable",
+      "x-goog-meta-app",
+      "x-goog-meta-format",
+      "x-goog-meta-role"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]

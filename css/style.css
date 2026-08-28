@@ -1,0 +1,631 @@
+/* Feuille de style provisoire — la passe de design est la phase 7.
+   Objectif ici : lisible, utilisable au pouce, sombre par défaut. */
+
+:root {
+  --bg: #11141b;
+  --surface: #181c26;
+  --surface-2: #1f2430;
+  --line: #2a3140;
+  --text: #e8ecf4;
+  --text-dim: #97a1b5;
+  --accent: #7ca9ff;
+  --accent-ink: #0b1020;
+  --danger: #ff8080;
+  --radius: 12px;
+  --gap: 16px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f4f6fa;
+    --surface: #ffffff;
+    --surface-2: #eef1f7;
+    --line: #d8dee9;
+    --text: #131722;
+    --text-dim: #5b6779;
+    --accent: #2f6bdc;
+    --accent-ink: #ffffff;
+    --danger: #b3261e;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* L'attribut `hidden` doit l'emporter sur toute règle de mise en page. Le
+   sélecteur d'identifiant de #screen-lock plus bas a une spécificité
+   supérieure à `.screen[hidden]` : sans `:not([hidden])`, masquer l'écran de
+   verrouillage n'avait aucun effet et il restait affiché par-dessus le coffre
+   déverrouillé. */
+.screen[hidden] { display: none; }
+
+/* --- Écran de verrouillage --- */
+
+#screen-lock:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: var(--gap);
+}
+
+.lock-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 28px 24px;
+}
+
+.lock-title {
+  margin: 0 0 4px;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+}
+
+.lock-sub {
+  margin: 0 0 20px;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+/* --- Champs --- */
+
+.field { display: block; margin-bottom: 14px; }
+
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+input[type="password"],
+input[type="text"],
+input[type="url"],
+input[type="search"] {
+  width: 100%;
+  padding: 11px 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+
+input:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- Boutons --- */
+
+.btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.btn-ghost {
+  width: auto;
+  background: transparent;
+  border-color: var(--line);
+  color: var(--text-dim);
+}
+
+.btn-ghost:hover { color: var(--text); }
+
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+/* --- Messages --- */
+
+.error, .warn, .busy, .notice, .empty {
+  font-size: 13px;
+  margin: 12px 0 0;
+}
+
+.error { color: var(--danger); }
+.warn { color: var(--text-dim); }
+.busy { color: var(--text-dim); }
+.empty { color: var(--text-dim); padding: 0 var(--gap); }
+
+/* --- Coffre --- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px var(--gap);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 5;
+}
+
+/* min-width:0 est indispensable : sans lui un enfant flex refuse de passer
+   sous sa largeur de contenu et fait deborder toute la barre. */
+.topbar-title {
+  margin: 0;
+  font-size: 18px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar .btn { flex: 0 0 auto; white-space: nowrap; }
+
+/* Ecrans tres etroits : on resserre plutot que de laisser deborder. */
+@media (max-width: 380px) {
+  .topbar { gap: 8px; padding: 12px 10px; }
+  .topbar .btn { padding: 8px 10px; font-size: 14px; }
+  .topbar-title { font-size: 16px; }
+}
+
+.btn-block { margin-top: 6px; }
+
+.clip-status {
+  margin: 0 var(--gap) 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.lock-countdown {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--danger);
+  white-space: nowrap;
+}
+
+@media (max-width: 380px) {
+  .clip-status {
+  margin: 0 var(--gap) 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.lock-countdown { font-size: 11px; }
+}
+
+.layout { display: block; }
+
+/* --- Panneau des repertoires --- */
+
+.group-panel {
+  display: none;
+  border-bottom: 1px solid var(--line);
+  padding: 8px var(--gap) 12px;
+}
+
+.group-panel-open { display: block; }
+
+.group-list { list-style: none; margin: 0 0 8px; padding: 0; }
+
+.group-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-dim);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.group-item:hover { color: var(--text); background: var(--surface); }
+
+.group-item-active {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--line);
+  font-weight: 500;
+}
+
+.group-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.group-count {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.btn-block { width: 100%; }
+
+/* --- Liste --- */
+
+.toolbar { display: flex; gap: 8px; padding: var(--gap); }
+.toolbar .search { flex: 1; }
+.toolbar .btn-primary { width: auto; flex: 0 0 auto; }
+
+.scope-label {
+  margin: 0 var(--gap) 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.entry-list { list-style: none; margin: 0; padding: 0 var(--gap) var(--gap); }
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.entry-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.entry-title {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entry-sub {
+  font-size: 13px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Detail --- */
+
+.detail {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+.detail[hidden] { display: none; }
+
+.detail-inner {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: var(--gap);
+}
+
+.detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.detail-title { margin: 0; font-size: 18px; }
+
+.field-row { display: flex; gap: 6px; align-items: stretch; }
+.field-row input { flex: 1; min-width: 0; }
+
+.select, textarea {
+  width: 100%;
+  padding: 11px 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+
+textarea { resize: vertical; }
+
+.gen-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 16px;
+}
+
+.gen-strength { font-size: 12px; color: var(--text-dim); }
+
+.gen-master { margin-bottom: 16px; }
+
+.gen-out {
+  display: block;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.custom-fields {
+  margin: 4px 0 18px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.custom-title { margin: 0 0 8px; font-size: 13px; color: var(--text-dim); }
+.custom-field { margin: 0 0 4px; font-size: 14px; overflow-wrap: anywhere; }
+.custom-field strong { font-weight: 500; }
+
+.detail-actions { display: flex; align-items: center; gap: 8px; margin-top: 20px; }
+.detail-actions .spacer { flex: 1; }
+.detail-actions .btn-primary { width: auto; }
+
+.btn-danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* --- Grand ecran : les repertoires deviennent une colonne permanente --- */
+
+@media (min-width: 820px) {
+  .btn-groups, #btn-groups { display: none; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    align-items: start;
+  }
+
+  .group-panel {
+    display: block;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+    min-height: calc(100dvh - 57px);
+    padding-top: var(--gap);
+  }
+
+  .detail-inner { padding: 28px var(--gap); }
+}
+
+/* --- Page de diagnostic (diagnostic.html) --- */
+
+.diag {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--gap);
+}
+
+.diag-title { font-size: 20px; margin: 8px 0 12px; }
+
+.diag-intro, .diag-note {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin: 0 0 16px;
+}
+
+.diag-note { margin-top: 10px; }
+
+.diag-block {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.diag-ctx {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+
+.diag-ctx strong { color: var(--text); font-weight: 500; }
+
+.diag .btn-primary { width: auto; }
+
+.diag-results {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+}
+
+.diag-line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: 8px;
+}
+
+.diag-ok { border-left-color: #4ec98a; }
+.diag-ko { border-left-color: var(--danger); }
+.diag-info { border-left-color: var(--text-dim); }
+
+.diag-line-title { font-size: 14px; font-weight: 500; }
+
+.diag-line-detail {
+  font-size: 13px;
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+
+.diag-verdict {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.diag-verdict-ok { background: rgba(78, 201, 138, 0.12); border: 1px solid #4ec98a; }
+.diag-verdict-ko { background: rgba(255, 128, 128, 0.10); border: 1px solid var(--danger); }
+
+/* --- Compte de synchronisation (écran de verrouillage) --- */
+
+.account {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.account-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.account-state {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+
+.signin { margin-bottom: 10px; }
+
+.hint {
+  margin: 4px 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+/* --- Indicateur de synchronisation (en-tête du coffre) --- */
+
+.sync-status {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-left: auto;
+  padding-right: 10px;
+  overflow-wrap: anywhere;
+}
+
+.sync-ok { color: var(--text-dim); }
+.sync-busy { color: var(--accent); }
+.sync-warn { color: var(--danger); }
+
+@media (max-width: 480px) {
+  .sync-status { font-size: 11px; }
+}
+
+/* Accès à la page de diagnostic. Discret sur PC, mais indispensable sur
+   téléphone : y accéder en tapant l'adresse à la main n'est pas praticable. */
+.diag-access {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 12px;
+}
+
+.diag-access a {
+  color: var(--text-dim);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.diag-access a:hover,
+.diag-access a:focus-visible {
+  color: var(--accent);
+}
+
+/* Rappel d'export local. Discret quand tout va bien, visible quand la dernière
+   copie sur disque date — c'est la seule sauvegarde qui ne dépende d'aucun
+   compte tiers. */
+.export-reminder {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.export-reminder-warn {
+  color: var(--danger);
+}
+
+/* Conflit entre deux coffres sans ancêtre commun. Volontairement voyant : les
+   deux issues détruisent quelque chose, l'utilisateur doit s'arrêter et lire. */
+.conflict {
+  margin: 0 0 var(--gap);
+  padding: 14px 16px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.conflict-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--danger);
+}
+
+.conflict-text {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
