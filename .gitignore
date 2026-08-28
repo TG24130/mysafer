@@ -10,3 +10,8 @@ graphify-out/
 *.log
 .DS_Store
 Thumbs.db
+
+# Notes de session périmées, doublon de REPRISE.md. Conservées sur le disque
+# mais hors du dépôt : elles contiennent une phrase de test et n'ont rien à
+# faire dans un dépôt public.
+reprise.md MySafer.txt

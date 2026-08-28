@@ -1,0 +1,6 @@
+# Fins de ligne normalisées dans le dépôt, quel que soit le système.
+* text=auto eol=lf
+
+# Binaires : ne jamais convertir.
+*.png binary
+*.kdbx binary
