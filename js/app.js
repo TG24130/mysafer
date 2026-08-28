@@ -17,6 +17,7 @@ import {
 import { generatePassphrase, generatePassword, passphraseBits, passwordBits } from './generator.js';
 import { createLockTimer, attachActivityListeners, DEFAULT_TIMEOUT_MS } from './lockTimer.js';
 import { copySecret, clearNow, cancelPendingClear, onStateChange, stateMessage } from './clipboard.js';
+import { rendreReordonnable, rendreReordonnableAuClavier } from './dragOrder.js';
 import { signIn, signOutUser, onAuthChange, authState } from './firebaseAuth.js';
 import {
   syncNow, downloadRemoteVault, adoptRemoteVault, canSync, syncErrorMessage,
@@ -309,6 +310,7 @@ function renderGroups() {
       uuid: g.uuid,
       name: g.name,
       depth: g.depth,
+      parentUuid: g.group.parentGroup ? String(g.group.parentGroup.uuid) : '',
       // Le compte affiché inclut les sous-répertoires : c'est ce que
       // l'utilisateur voit en cliquant dessus.
       entryCount: entriesOf(g.group).length,
@@ -316,8 +318,15 @@ function renderGroups() {
   }
 }
 
-function groupItem({ uuid, name, depth, entryCount }) {
+function groupItem({ uuid, name, depth, entryCount, parentUuid }) {
   const li = document.createElement('li');
+  li.className = 'group-row';
+  // L'entrée « Tout » n'est pas un répertoire : elle ne se déplace pas, et rien
+  // ne peut se ranger à sa place.
+  if (uuid) {
+    li.dataset.uuid = uuid;
+    li.dataset.parent = parentUuid || '';
+  }
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'group-btn';
@@ -380,7 +389,19 @@ function visibleRows() {
   const base = selectedGroupUuid
     ? entriesOf(groupByUuid(selectedGroupUuid) || db.getDefaultGroup())
     : allEntries(db);
-  return sortByTitle(searchEntries(base, $('input-search').value));
+  // Ordre du fichier, et non ordre alphabétique : c'est l'utilisateur qui
+  // range, par appui long puis déplacement. Trier ici annulerait chaque dépôt
+  // à la seconde suivante.
+  // Pendant une recherche, en revanche, l'ordre manuel n'a plus de sens sur un
+  // sous-ensemble : on trie, et le déplacement est désactivé.
+  const q = $('input-search').value.trim();
+  const rows = searchEntries(base, q);
+  return q ? sortByTitle(rows) : rows;
+}
+
+/** Vrai quand une recherche filtre la liste : réordonner y serait trompeur. */
+function rechercheActive() {
+  return $('input-search').value.trim() !== '';
 }
 
 function renderEntries() {
@@ -468,6 +489,7 @@ function rendreBalayable(li, slide) {
 function entryItem(entry, group) {
   const li = document.createElement('li');
   li.className = 'entry';
+  li.dataset.uuid = String(entry.uuid);
 
   const open = document.createElement('button');
   open.type = 'button';
@@ -522,6 +544,85 @@ function entryItem(entry, group) {
   li.append(logement, slide);
   return li;
 }
+
+// ---------------------------------------------------------------------------
+// Réordonnancement au doigt
+// ---------------------------------------------------------------------------
+//
+// KDBX conserve l'ordre des entrées et des répertoires dans le fichier lui-même,
+// et kdbxweb expose `db.move(objet, groupe, index)` — le même appel sert aux
+// deux. L'ordre choisi ici survit donc à l'export et se retrouve dans
+// KeePassXC.
+
+/** Retrouve un objet du coffre à partir de l'uuid porté par sa ligne. */
+function entreeParUuid(uuid) {
+  const trouve = allEntries(db).find((r) => String(r.entry.uuid) === uuid);
+  return trouve || null;
+}
+
+function groupeParUuid(uuid) {
+  const trouve = flattenGroups(db).find((g) => g.uuid === uuid);
+  return trouve ? trouve.group : null;
+}
+
+/**
+ * Applique à la base l'ordre que le DOM vient d'adopter.
+ *
+ * On relit la liste plutôt que de se fier à l'index annoncé : le déplacement a
+ * pu franchir plusieurs voisins, et le DOM est la seule vérité sur le résultat.
+ */
+async function appliquerOrdreEntrees() {
+  const lignes = [...$('entry-list').querySelectorAll('.entry[data-uuid]')];
+  for (let i = 0; i < lignes.length; i += 1) {
+    const trouve = entreeParUuid(lignes[i].dataset.uuid);
+    if (!trouve) continue;
+    // Déposer une entrée parmi celles d'un autre répertoire l'y range : c'est
+    // ce que le geste laisse attendre, et le refuser serait déroutant.
+    const cible = trouve.group;
+    db.move(trouve.entry, cible, i);
+  }
+  await persist();
+  renderGroups();
+  renderEntries();
+}
+
+async function appliquerOrdreGroupes() {
+  const lignes = [...$('group-list').querySelectorAll('.group-row[data-uuid]')];
+  for (let i = 0; i < lignes.length; i += 1) {
+    const groupe = groupeParUuid(lignes[i].dataset.uuid);
+    if (!groupe || !groupe.parentGroup) continue;
+    // Index parmi ses seuls frères : la liste est aplatie, mais l'arbre ne
+    // l'est pas.
+    const freres = lignes.filter((l) => l.dataset.parent === lignes[i].dataset.parent);
+    db.move(groupe, groupe.parentGroup, freres.indexOf(lignes[i]));
+  }
+  await persist();
+  renderGroups();
+  renderEntries();
+}
+
+/** Un répertoire ne peut se ranger qu'entre ses propres frères. */
+const freresDe = (li) => [...$('group-list').querySelectorAll('.group-row[data-uuid]')]
+  .filter((autre) => autre.dataset.parent === li.dataset.parent);
+
+const optionsEntrees = {
+  liste: $('entry-list'),
+  selecteur: '.entry[data-uuid]',
+  deplacable: () => !rechercheActive(),
+  surDepot: () => { appliquerOrdreEntrees(); },
+};
+
+const optionsGroupes = {
+  liste: $('group-list'),
+  selecteur: '.group-row[data-uuid]',
+  voisinsPossibles: freresDe,
+  surDepot: () => { appliquerOrdreGroupes(); },
+};
+
+rendreReordonnable(optionsEntrees);
+rendreReordonnableAuClavier(optionsEntrees);
+rendreReordonnable(optionsGroupes);
+rendreReordonnableAuClavier(optionsGroupes);
 
 // ---------------------------------------------------------------------------
 // Panneau de détail

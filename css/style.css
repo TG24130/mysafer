@@ -1067,3 +1067,26 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
   grid-template-columns: minmax(0, 7rem) minmax(0, 1fr);
   gap: calc(var(--u) * 2);
 }
+
+/* --- Réordonnancement au doigt ------------------------------------------ */
+
+/* Le capuchon saisi se soulève de son logement : assise plus haute, légère
+   mise à l'échelle. C'est ce que fait une touche qu'on retire d'un clavier. */
+.is-dragging {
+  position: relative;
+  z-index: 2;
+  transform: scale(1.02);
+  box-shadow: 0 6px 0 var(--chassis-deep), 0 8px 16px rgba(0, 0, 0, .45);
+}
+
+.entry.is-dragging .entry-slide,
+.entry.is-dragging .entry-main { transition: none; }
+
+/* Pendant le déplacement, les voisins glissent au lieu de sauter. */
+.is-reordering > * { transition: transform .16s cubic-bezier(.2, .8, .3, 1); }
+.is-reordering .is-dragging { transition: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .is-dragging { transform: none; }
+  .is-reordering > * { transition: none; }
+}
