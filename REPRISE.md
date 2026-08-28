@@ -508,28 +508,33 @@ Recherche des briques : `../Quittance-Facile/.github-research/latest.md`
 1. **Test du presse-papiers**, en bas de `diagnostic.html`, avec un vrai clic
    dans Edge ou Chrome — pas dans le panneau navigateur de l'application, qui
    est un Electron embarqué. Purement informatif, ne bloque rien.
-2. **Ouvrir un `.kdbx` exporté dans KeePassXC.** Le format a déjà été validé par
-   une implémentation indépendante (kdbxweb sous Node, signatures
-   `0x9AA2D903` / `0xB54BFB67`, KDBX 4.0), mais une base de code entièrement
-   étrangère reste la meilleure preuve.
+2. ~~Ouvrir un `.kdbx` exporté dans KeePassXC.~~ **Fait le 2026-08-28.**
+   KeePassXC 2.x sur Windows ouvre un export de production : dérivation Argon2,
+   répertoires, entrée et **mot de passe protégé** tous corrects. C'est une base
+   de code qui ne partage rien avec kdbxweb — l'interopérabilité du format n'est
+   donc plus une hypothèse.
+   Note pratique : lancé depuis un script, KeePassXC s'ouvre parfois derrière la
+   fenêtre active et paraît inerte. `keepassxc-cli show -s <fichier> <titre>`
+   donne la même preuve sans interface.
 3. **Diagnostic PRF sur le téléphone**, après le premier déploiement HTTPS.
    `http://192.168.x.x` échouera toujours : WebAuthn exige un contexte sécurisé.
    La page se rejoint depuis le lien « Diagnostic de cet appareil », en bas de
    l'écran de verrouillage.
 
-## Avertissement
+## État de confiance
 
-Le coffre est désormais **en service réel** : synchronisé, sauvegardé par copies
-horodatées, protégé contre l'écrasement. Deux réserves demeurent, à lever avant
-de lui confier ce qui compte vraiment.
+Le coffre est **en service réel** et vérifié de bout en bout : synchronisation
+multi-appareils, copies horodatées avec rotation, garde-fou contre l'écrasement,
+export local avec rappel, et interopérabilité KeePassXC prouvée.
 
-**Faire un export sur disque, et vérifier qu'il s'ouvre dans KeePassXC.** Les
-copies horodatées vivent toutes chez le même hébergeur, sous le même compte : un
-compte fermé les emporterait ensemble. Un fichier sur disque est la seule copie
-qui ne dépende de personne — et l'ouvrir dans KeePassXC est la seule preuve
-qu'une base de code entièrement étrangère sait le lire. Tant que ce n'est pas
-fait, le format n'est validé que par l'implémentation qui l'a écrit.
+Deux réserves demeurent, de nature différente.
 
 **Perdre la phrase maîtresse reste sans recours** (décision 3). Aucune
-récupération n'existe, ni ici ni ailleurs.
+récupération n'existe, ni ici ni ailleurs. C'est le prix assumé de l'absence de
+tiers de confiance.
+
+**Les copies en ligne dépendent toutes d'un seul compte Google.** Un compte
+fermé ou suspendu les emporterait ensemble. L'export sur disque est la seule
+copie qui n'en dépende pas — d'où le rappel tous les trente jours, qu'il vaut
+mieux ne pas ignorer.
 
