@@ -71,10 +71,13 @@ if (IS_TEST_ENV) {
   ].join(';');
   // Réserver la hauteur du bandeau : posé en `fixed`, il recouvrait la barre
   // de modes du coffre, donc des commandes réelles.
+  // On publie la hauteur du bandeau plutôt que de rembourrer <body> : les
+  // écrans font 100dvh, et un rembourrage sur le parent les faisait déborder
+  // d'autant — la barre de modes se retrouvait rognée.
   const attach = () => {
     if (!document.body) return;
     document.body.appendChild(badge);
-    document.body.style.paddingBottom = badge.offsetHeight + 'px';
+    document.documentElement.style.setProperty('--badge-h', badge.offsetHeight + 'px');
   };
   if (document.body) attach();
   else document.addEventListener('DOMContentLoaded', attach, { once: true });

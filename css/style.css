@@ -29,6 +29,7 @@
   --chassis-deep: #16191C;
   --chassis-edge: #33383E;
   --chassis-line: #3D444B;
+  --chassis-hi: #474D55;
 
   /* Surfaces de travail : capuchons de touches */
   --cap: #E9E3D5;
@@ -45,7 +46,11 @@
   /* Signaux. Un seul orange, et il commet. */
   --action: #F4600C;
   --action-deep: #C24605;
-  --action-ink: #FFFFFF;
+  /* Encre sombre sur l'orange, et non blanche : 6,5:1 contre 3,22:1.
+     La barre de qualité montre du blanc sur orange ; on s'en écarte
+     délibérément, parce que c'est la touche COPIER, en plein soleil, et que
+     c'est la condition d'échec nommée par l'utilisateur. */
+  --action-ink: #1B1E21;
   --live: #F0A500;
   --danger: #C0392B;
 
@@ -56,19 +61,13 @@
   --gap: calc(var(--u) * 4);
 }
 
-/* Le mode clair n'inverse pas le monde : il éclaircit le châssis, comme un
-   appareil vu en plein jour. Les capuchons ne bougent pas — ce sont eux qui
-   portent le texte, et leur contraste est le point. */
-@media (prefers-color-scheme: light) {
-  :root {
-    --chassis: #6E747B;
-    --chassis-deep: #565C63;
-    --chassis-edge: #858B92;
-    --chassis-line: #9AA0A7;
-    --ink-on-chassis: #FBF9F4;
-    --ink-on-chassis-dim: #E2E0D8;
-  }
-}
+/* PAS DE SECONDE RENDITION. Un appareil n'a qu'un châssis.
+   La variante « claire » éclaircissait le gunmetal et faisait tomber tout le
+   texte porté par le châssis à 3,57:1 — donc pire au soleil que la rendition
+   sombre, exactement l'inverse du but. Or ce n'est pas le châssis qui doit
+   être lisible dehors : ce sont les capuchons, et ils sont déjà clairs dans
+   les deux cas. Une rendition unique supprime la classe entière de ces
+   défauts de contraste. */
 
 /* ---------------------------------------------------------------------------
    Socle
@@ -86,7 +85,9 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  min-height: 100dvh;
+  /* --badge-h est posée par js/firebaseInit.js quand le bandeau « projet de
+     test » est affiché ; nulle en production. */
+  min-height: calc(100dvh - var(--badge-h, 0px));
   background: var(--chassis-deep);
   color: var(--ink-on-chassis);
   font: 400 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -96,7 +97,8 @@ body {
 /* Toute la signalétique est mono, en capitales espacées : c'est la gravure de
    l'appareil. Le texte long, lui, reste en pile système pour rester lisible. */
 .legend, .key, .tab, .field-label, .plate, .rack-title, .screenlet,
-.unit-ref, .entry-title, .entry-sub, .scope-label, .gen-out, .gen-strength {
+.unit-ref, .unit-name, .entry-title, .entry-sub, .scope-label, .gen-out,
+.gen-strength, .detail-title, .conflict-title, .custom-title, .group-btn {
   font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono",
     "Roboto Mono", Menlo, Consolas, monospace;
 }
@@ -192,7 +194,7 @@ body {
   background: var(--chassis-edge);
   color: var(--ink-on-chassis);
   box-shadow:
-    inset 0 1px 0 #474D55,
+    inset 0 1px 0 var(--chassis-hi),
     inset 0 -2px 0 var(--chassis-deep),
     0 1px 0 #000;
 }
@@ -207,7 +209,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100dvh;
+  min-height: calc(100dvh - var(--badge-h, 0px));
   padding: var(--gap);
   padding-bottom: max(var(--gap), env(safe-area-inset-bottom));
 }
@@ -227,31 +229,39 @@ body {
     0 4px 0 #000;
 }
 
+/* Plaque signalétique vissée sur le châssis : capuchon clair, lettrage gravé
+   sombre, à l'échelle d'affichage. C'est le seul étage typographique large de
+   l'appareil, et il porte son identité.
+   Il répond aussi à un vrai défaut : l'écran d'accueil ne montrait aucune
+   surface claire, donc rien du monde — un proche y voyait « un formulaire
+   sombre qui demande un mot de passe », indistinguable d'une banque. */
 .unit-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--gap);
-  padding-bottom: calc(var(--u) * 4);
-  margin-bottom: calc(var(--u) * 5);
-  border-bottom: 2px solid var(--chassis-line);
+  margin-bottom: calc(var(--u) * 6);
+  padding: calc(var(--u) * 4) calc(var(--u) * 5);
+  background: var(--cap);
+  border-radius: var(--radius);
+  box-shadow:
+    inset 0 1px 0 var(--cap-edge-hi),
+    inset 0 -2px 0 var(--cap-edge-lo),
+    0 2px 0 var(--chassis-deep);
 }
 
 .unit-name {
   margin: 0;
-  font-size: 22px;
+  font-size: clamp(28px, 9vw, 38px);
   font-weight: 700;
-  letter-spacing: .14em;
+  line-height: 1;
+  letter-spacing: .16em;
   text-transform: uppercase;
-  color: var(--ink-on-chassis);
+  color: var(--ink);
 }
 
 .unit-ref {
-  margin: 0;
+  margin: calc(var(--u) * 2) 0 0;
   font-size: 10px;
-  letter-spacing: .12em;
+  letter-spacing: .14em;
   text-transform: uppercase;
-  color: var(--ink-on-chassis-dim);
+  color: var(--ink-2);
 }
 
 /* Écran encastré : verre sombre en creux, texte ambre. C'est LE dispositif
@@ -451,7 +461,7 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
 .screen-vault {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  min-height: calc(100dvh - var(--badge-h, 0px));
   background: var(--chassis);
 }
 
@@ -501,12 +511,17 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
 
 .screenlet-alt {
   flex: 0 0 auto;
-  color: var(--action);
+  /* Le compte à rebours est un ÉTAT, donc ambre — jamais l'orange, qui ne dit
+     que « ceci commet ». Il passe au rouge dans les dernières secondes, quand
+     l'information devient un avertissement. */
+  color: var(--live);
   font-size: 11px;
   letter-spacing: .06em;
 }
 
-.sync-warn { color: var(--action); }
+.screenlet-alt.is-urgent { color: #E8897C; }
+
+.sync-warn { color: #E8897C; }
 
 .layout { flex: 1 1 auto; min-height: 0; }
 
@@ -633,7 +648,6 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
   border-radius: var(--radius);
   background: var(--cap-2);
   color: var(--ink);
-  font-family: inherit;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: .06em;
@@ -657,10 +671,12 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
 .group-btn[aria-current="true"] {
   background: var(--chassis-deep);
   color: var(--live);
+  /* Annonciateur cerclé, comme partout ailleurs. Un liseré de 3 px à gauche
+     est le motif que cette feuille qualifie elle-même de tic d'interface :
+     il survivait ici sous forme d'ombre interne, invisible au détecteur. */
   box-shadow:
-    inset 3px 0 0 var(--live),
-    inset 0 2px 0 #000,
-    inset 0 -1px 0 var(--chassis-edge);
+    inset 0 0 0 2px var(--live),
+    inset 0 2px 0 #000;
 }
 
 .group-btn[aria-current="true"]:hover { background: #0E1113; }
@@ -739,16 +755,19 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
   border: 0;
   border-radius: var(--radius);
   background: var(--chassis-edge);
-  color: var(--ink-on-chassis-dim);
+  /* Encre pleine et non atténuée : c'est la navigation principale, tenue à
+     une main. En gris atténué elle tombait à 3,78:1. */
+  color: var(--ink-on-chassis);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
   cursor: pointer;
-  box-shadow: inset 0 1px 0 #474D55, inset 0 -2px 0 var(--chassis-deep);
+  box-shadow: inset 0 1px 0 var(--chassis-hi), inset 0 -2px 0 var(--chassis-deep);
 }
 
-/* Le mode courant s'allume en ambre : l'état se lit, il ne se devine pas. */
+/* Le mode courant est une touche enfoncée en capuchon clair : sur cet appareil
+   c'est ainsi qu'un mode se signale, et le contraste y est maximal. */
 .tab.is-current {
   background: var(--cap);
   color: var(--ink);

@@ -106,7 +106,12 @@
         Cette phrase ne peut pas être réinitialisée. Si elle est perdue, le
         coffre est définitivement illisible.
       </p>
-      <button type="submit" class="key key-action key-block">Créer le coffre</button>
+      <!-- Volontairement PAS en orange. Sur l'écran d'accueil, « Se connecter » et
+           « Créer le coffre » avaient le même poids visuel alors que l'un récupère
+           un coffre existant et l'autre en fabrique un second, irréconciliable.
+           Le principe 5 du produit dit exactement cela : proposer d'abord la
+           mauvaise action finit par la faire commettre. -->
+      <button type="submit" class="key key-block">Créer le coffre</button>
     </form>
 
     <p id="lock-error" class="note note-alert" role="alert" hidden></p>

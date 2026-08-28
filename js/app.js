@@ -126,6 +126,7 @@ function disarmLock() {
   if (detachActivity) { detachActivity(); detachActivity = null; }
   if (countdownHandle !== null) { clearInterval(countdownHandle); countdownHandle = null; }
   $('lock-countdown').textContent = '';
+  $('lock-countdown').classList.remove('is-urgent');
 }
 
 /**
@@ -140,6 +141,9 @@ function renderCountdown() {
   if (reste > 60000) { el.textContent = ''; return; }
   const s = Math.ceil(reste / 1000);
   el.textContent = 'Verrouillage dans ' + s + ' s';
+  // Ambre tant que c'est une information ; rouge quand ça devient un
+  // avertissement. Jamais orange : l'orange ne dit que « ceci commet ».
+  el.classList.toggle('is-urgent', s <= 10);
 }
 
 /** Retour visuel bref sur un bouton, sans bloquer l'interface. */
