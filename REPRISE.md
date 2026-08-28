@@ -1,8 +1,28 @@
-# Reprise de session — Coffre
+# Reprise de session — MySafer
 
 Dernière session : **2026-08-28**. À lire en premier au démarrage d'une nouvelle
 session. Le détail technique est dans `README.md` ; ce fichier ne dit que l'état
 et la suite.
+
+## Ouvrir la session au bon endroit
+
+Répertoire de travail : `C:\Users\greni\Desktop\Dossiers CLAUDE\MySafer`.
+
+Le projet s'appelait « Coffre-Fort » et vivait à la racine du bureau ; déplacé
+et renommé le 2026-08-28, en même temps que le produit a pris le nom MySafer.
+
+```bash
+python tools/serve.py 5175
+```
+
+Ne pas revenir à `python -m http.server` : il laisse le navigateur mettre les
+fichiers en cache et fait tester du code périmé.
+
+```bash
+npm test
+```
+
+Six suites, 94 tests. Site en ligne : https://tg24130.github.io/mysafer/
 
 ## Reprise immédiate — phase 4, synchronisation Firebase
 
