@@ -160,6 +160,18 @@ async function copyToClipboard(texte, button) {
   flash(button, (await copySecret(texte)) ? 'Copié' : 'Échec');
 }
 
+// Filet contre l'échec silencieux. Un gestionnaire `async` qui lève laisse une
+// promesse rejetée que personne ne voit : le bouton paraît mort, sans le
+// moindre message. C'est exactement ce qui s'est produit sur la suppression par
+// balayage — la fonction appelée n'existait pas, et l'utilisateur n'a vu qu'un
+// bouton inerte. Sur une application qui garde des mots de passe, un échec muet
+// est pire qu'un échec bruyant.
+window.addEventListener('unhandledrejection', (e) => {
+  const msg = (e.reason && (e.reason.message || String(e.reason))) || 'erreur inconnue';
+  if (!$('screen-vault').hidden) setSyncStatus('Échec : ' + msg, 'warn');
+  else setError('Échec : ' + msg);
+});
+
 // État réel du presse-papiers, affiché sans embellissement. Un effacement qui
 // échoue doit se voir : croire un mot de passe effacé alors qu'il ne l'est pas
 // est pire que savoir qu'il traîne.
@@ -669,15 +681,31 @@ async function saveDetail(e) {
   renderEntries();
 }
 
-async function deleteEntry() {
-  if (!editing) return;
-  const titre = fieldText(editing, 'Title') || '(sans titre)';
-  if (!confirm('Supprimer « ' + titre + ' » ?\n\nL\'entrée part à la corbeille du coffre.')) return;
-  db.remove(editing);
+/**
+ * Supprime une entrée, après confirmation explicite.
+ *
+ * Chemin unique, appelé par le bouton du panneau de détail et par le balayage
+ * de la liste. La confirmation n'est pas négociable : sur téléphone, un
+ * balayage part parfois d'un pouce qui voulait faire défiler.
+ *
+ * @returns {Promise<boolean>} true si la suppression a eu lieu.
+ */
+async function demanderSuppression(entry) {
+  if (!entry) return false;
+  const titre = fieldText(entry, 'Title') || '(sans titre)';
+  if (!confirm('Supprimer « ' + titre + ' » ?\n\n'
+    + "L'entrée part à la corbeille du coffre : elle reste récupérable dans "
+    + 'KeePassXC, et la copie horodatée en ligne la conserve aussi.')) return false;
+
+  db.remove(entry);
   await persist();
-  closeDetail();
   renderGroups();
   renderEntries();
+  return true;
+}
+
+async function deleteEntry() {
+  if (await demanderSuppression(editing)) closeDetail();
 }
 
 // ---------------------------------------------------------------------------
