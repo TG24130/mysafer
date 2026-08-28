@@ -569,6 +569,9 @@ $('form-create').addEventListener('submit', async (e) => {
   setBusy(true);
   try {
     db = createVault(pwd, 'Coffre');
+    // Un enrôlement biométrique laissé par un coffre précédent emballerait une
+    // phrase qui n'ouvre plus rien.
+    await desactiverBio();
     await persist();
     $('input-new-master').value = $('input-new-master2').value = '';
     $('gen-master-out').textContent = '';
@@ -592,9 +595,16 @@ $('form-unlock').addEventListener('submit', async (e) => {
     // Appareil neuf : le coffre vient d'être téléchargé et n'est pas encore
     // installé. On ne l'écrit dans IndexedDB qu'une fois la phrase vérifiée,
     // pour ne jamais stocker un fichier qu'on ne saurait pas rouvrir.
-    db = pendingRemoteBytes
-      ? await adoptRemoteVault(pendingRemoteBytes, $('input-master').value)
-      : await openVault(await loadVaultBytes(), $('input-master').value);
+    if (pendingRemoteBytes) {
+      db = await adoptRemoteVault(pendingRemoteBytes, $('input-master').value);
+      // Le coffre local vient d'être remplacé par un autre, avec sa propre
+      // phrase maîtresse. L'enrôlement biométrique emballait l'ancienne : le
+      // garder produirait un déverrouillage qui échoue sans raison lisible.
+      // On le retire, l'utilisateur le refera en connaissance de cause.
+      await desactiverBio();
+    } else {
+      db = await openVault(await loadVaultBytes(), $('input-master').value);
+    }
     pendingRemoteBytes = null;
     $('input-master').value = '';
     selectedGroupUuid = null;
