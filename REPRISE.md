@@ -447,6 +447,29 @@ paquet emballé, lui, disparaît — c'est ce qui compte.
 enrôlement, aucune erreur de console. **Reste à éprouver** : l'enrôlement et le
 déverrouillage réels, sur PC puis sur iPhone.
 
+### Écran de verrouillage : l'ordre dépend de la situation
+
+Défaut signalé par l'usage, après deux coffres vides créés par erreur — dont un
+sur le téléphone. Sur un appareil neuf, l'écran présentait « créer un coffre »
+en premier et « se connecter » en petit tout en bas. Or c'est exactement
+l'inverse qu'il faut : se connecter est la seule action sensée, et créer un
+second coffre est presque toujours une erreur, puisque deux coffres sans ancêtre
+commun ne fusionnent pas.
+
+`.lock-card` est désormais un conteneur flex. Quand il n'y a **ni coffre local
+ni session ouverte**, la classe `lock-card-accueil` remonte le bloc
+Synchronisation avant la création, ouvre d'emblée le formulaire de connexion,
+place le focus sur l'adresse e-mail, et affiche sous « Créer un coffre » un
+avertissement disant pourquoi ce n'est probablement pas ce qu'on veut.
+
+Dès qu'un coffre local existe, l'ordre habituel revient : la phrase maîtresse
+d'abord, puisque c'est le geste quotidien.
+
+**Corollaire déjà corrigé** : adopter un coffre distant ou en créer un nouveau
+invalide l'enrôlement biométrique. Celui-ci emballe la phrase du coffre présent
+au moment de l'activation ; le conserver ferait échouer le déverrouillage sans
+raison lisible.
+
 ### Reste à faire
 
 **Aucune vraie donnée avant le point 1.** Il n'est pas négociable : c'est le

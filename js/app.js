@@ -787,8 +787,18 @@ async function refreshLockScreen() {
 
   majBioDeverrouillage();
 
+  // Appareil neuf et non connecté : on remonte le bloc Synchronisation avant la
+  // création, et on ouvre le formulaire de connexion. Créer un coffre ici est
+  // presque toujours une erreur — deux coffres sans ancêtre commun ne
+  // fusionnent pas — et l'ordre inverse l'a effectivement provoquée deux fois.
+  const accueil = !déverrouiller && !authState.currentUser;
+  document.querySelector('.lock-card').classList.toggle('lock-card-accueil', accueil);
+  $('create-hint').hidden = !accueil;
+  if (accueil && authState.resolved) $('form-signin').hidden = false;
+
   if (!$('screen-lock').hidden) {
-    (déverrouiller ? $('input-master') : $('input-new-master')).focus();
+    if (accueil) $('input-email').focus();
+    else (déverrouiller ? $('input-master') : $('input-new-master')).focus();
   }
 }
 

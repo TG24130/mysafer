@@ -50,7 +50,11 @@
     </form>
 
     <form id="form-create" hidden autocomplete="off">
-      <p class="lock-sub">Aucun coffre sur cet appareil. Créez-en un.</p>
+      <p class="lock-sub">Aucun coffre sur cet appareil.</p>
+      <p id="create-hint" class="hint" hidden>
+        Si vous avez déjà un coffre, connectez-vous ci-dessus pour le récupérer
+        plutôt que d'en créer un second — les deux ne pourraient pas fusionner.
+      </p>
 
       <div class="gen-master">
         <button type="button" id="btn-gen-master" class="btn btn-ghost">
