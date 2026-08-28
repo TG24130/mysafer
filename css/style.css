@@ -569,8 +569,9 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
 }
 
 /* Le logement : ce qui se trouve SOUS le capuchon. Il ne bouge pas ; c'est la
-   touche qui glisse et le découvre. */
-.entry-slot {
+   touche qui glisse et le découvre. Partagé par les entrées et les
+   répertoires — même geste, même grammaire. */
+.swipe-slot {
   position: absolute;
   inset: 0;
   display: flex;
@@ -578,7 +579,7 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
   background: #4A1A13;
 }
 
-.entry-remove {
+.swipe-remove {
   width: 108px;
   border-radius: 0;
   box-shadow: inset 0 1px 0 #D4584B, inset 0 -2px 0 #8E2A1F;
@@ -586,7 +587,7 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
 
 /* Le capuchon lui-même. `--glisse` est posée pendant le geste ; à son terme
    la classe prend le relais et la transition fait l'accroche. */
-.entry-slide {
+.swipe-slide {
   position: relative;
   display: flex;
   align-items: stretch;
@@ -599,10 +600,10 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
   touch-action: pan-y;
 }
 
-.entry.is-open .entry-slide { transform: translateX(-108px); }
+.is-open .swipe-slide { transform: translateX(-108px); }
 
 /* Pendant le geste, aucune transition : le capuchon doit suivre le doigt. */
-.entry-slide:active { transition: none; }
+.swipe-slide:active { transition: none; }
 
 .entry-main {
   flex: 1 1 auto;
@@ -670,7 +671,12 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
   gap: calc(var(--u) * 2);
 }
 
-.group-item { display: block; }
+.group-row {
+  position: relative;
+  min-width: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
 
 .group-btn {
   display: flex;
@@ -922,7 +928,7 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
    --------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .key, .entry-main, .entry-slide { transition: none; }
+  .key, .entry-main, .swipe-slide { transition: none; }
   .key:active, .entry-main:active { transform: none; }
 }
 
@@ -1079,8 +1085,8 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
   box-shadow: 0 6px 0 var(--chassis-deep), 0 8px 16px rgba(0, 0, 0, .45);
 }
 
-.entry.is-dragging .entry-slide,
-.entry.is-dragging .entry-main { transition: none; }
+.is-dragging .swipe-slide,
+.is-dragging .entry-main { transition: none; }
 
 /* Pendant le déplacement, les voisins glissent au lieu de sauter. */
 .is-reordering > * { transition: transform .16s cubic-bezier(.2, .8, .3, 1); }

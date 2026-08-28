@@ -311,6 +311,8 @@ function renderGroups() {
       name: g.name,
       depth: g.depth,
       parentUuid: g.group.parentGroup ? String(g.group.parentGroup.uuid) : '',
+      // La racine n'a pas de parent : c'est le coffre, pas un répertoire.
+      supprimable: Boolean(g.group.parentGroup),
       // Le compte affiché inclut les sous-répertoires : c'est ce que
       // l'utilisateur voit en cliquant dessus.
       entryCount: entriesOf(g.group).length,
@@ -318,7 +320,38 @@ function renderGroups() {
   }
 }
 
-function groupItem({ uuid, name, depth, entryCount, parentUuid }) {
+/**
+ * Supprime un répertoire, après confirmation qui annonce ce qu'il emporte.
+ *
+ * Le compte est récursif : un répertoire supprimé emmène ses sous-répertoires
+ * et toutes leurs entrées. Ne pas le dire reviendrait à faire disparaître des
+ * mots de passe sur un geste qui n'annonçait qu'un rangement.
+ */
+async function supprimerGroupe(groupe) {
+  if (!groupe || !groupe.parentGroup) return false;   // jamais la racine
+
+  const nom = groupName(groupe);
+  const combien = entriesOf(groupe).length;
+  const detail = combien === 0
+    ? 'Il est vide.'
+    : `Il contient ${combien} entrée${combien > 1 ? 's' : ''}, qui partiront avec lui.`;
+
+  if (!confirm(`Supprimer le répertoire « ${nom} » ?\n\n${detail}\n\n`
+    + "Tout part à la corbeille du coffre : rien n'est effacé définitivement, "
+    + 'et KeePassXC permet de le récupérer.')) return false;
+
+  db.remove(groupe);
+  // Si c'était le répertoire affiché, revenir à « Tout » plutôt que de rester
+  // sur une sélection qui n'existe plus.
+  if (selectedGroupUuid === String(groupe.uuid)) selectedGroupUuid = null;
+
+  await persist();
+  renderGroups();
+  renderEntries();
+  return true;
+}
+
+function groupItem({ uuid, name, depth, entryCount, parentUuid, supprimable }) {
   const li = document.createElement('li');
   li.className = 'group-row';
   // L'entrée « Tout » n'est pas un répertoire : elle ne se déplace pas, et rien
@@ -345,13 +378,48 @@ function groupItem({ uuid, name, depth, entryCount, parentUuid }) {
 
   btn.append(label, count);
   btn.addEventListener('click', () => {
+    // Une ligne ouverte se referme au lieu de changer de répertoire.
+    if (li.classList.contains('is-open')) { fermerLigne(); return; }
     selectedGroupUuid = uuid;
     renderGroups();
     renderEntries();
     closeGroupPanel();
   });
 
-  li.append(btn);
+  // « Tout » et la racine ne se suppriment pas : l'une n'est pas un
+  // répertoire, l'autre est le coffre lui-même.
+  if (!supprimable) {
+    li.append(btn);
+    return li;
+  }
+
+  const logement = document.createElement('div');
+  logement.className = 'swipe-slot';
+  const supprimer = document.createElement('button');
+  supprimer.type = 'button';
+  supprimer.className = 'key key-danger swipe-remove';
+  supprimer.textContent = 'Supprimer';
+  supprimer.tabIndex = -1;
+  supprimer.setAttribute('aria-hidden', 'true');
+  supprimer.addEventListener('click', async () => {
+    if (!(await supprimerGroupe(groupeParUuid(uuid)))) fermerLigne();
+  });
+  logement.append(supprimer);
+
+  const slide = document.createElement('div');
+  slide.className = 'swipe-slide';
+  slide.append(btn);
+  rendreBalayable(li, slide);
+
+  // Équivalent clavier : le balayage est inaccessible sans écran tactile, et
+  // les répertoires n'ont pas de panneau de détail où loger un bouton.
+  btn.addEventListener('keydown', (e) => {
+    if (e.key !== 'Delete') return;
+    e.preventDefault();
+    supprimerGroupe(groupeParUuid(uuid));
+  });
+
+  li.append(logement, slide);
   return li;
 }
 
@@ -524,10 +592,10 @@ function entryItem(entry, group) {
   // accessible au clavier ; d'où aria-hidden, pour ne pas annoncer deux fois
   // la même action ni piéger le focus sur un élément hors écran.
   const logement = document.createElement('div');
-  logement.className = 'entry-slot';
+  logement.className = 'swipe-slot';
   const supprimer = document.createElement('button');
   supprimer.type = 'button';
-  supprimer.className = 'key key-danger entry-remove';
+  supprimer.className = 'key key-danger swipe-remove';
   supprimer.textContent = 'Supprimer';
   supprimer.tabIndex = -1;
   supprimer.setAttribute('aria-hidden', 'true');
@@ -537,7 +605,7 @@ function entryItem(entry, group) {
   logement.append(supprimer);
 
   const slide = document.createElement('div');
-  slide.className = 'entry-slide';
+  slide.className = 'swipe-slide';
   slide.append(open, copy);
   rendreBalayable(li, slide);
 
