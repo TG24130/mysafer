@@ -11,12 +11,28 @@
 /** Champs standard d'une entrée KDBX. */
 export const FIELDS = ['Title', 'UserName', 'Password', 'URL', 'Notes'];
 
+/**
+ * Champs postaux, stockés comme champs personnalisés KDBX.
+ *
+ * Le format KDBX ne prévoit que cinq champs standard ; tout le reste vit en
+ * champs nommés libres. Ceux-ci sont donc de vrais champs KDBX, lisibles et
+ * modifiables dans KeePassXC comme dans KeePassDX — pas une invention locale
+ * qui se perdrait à l'export.
+ *
+ * Ils sont listés ici pour être exclus de customFields() : sans cela ils
+ * s'afficheraient deux fois, une fois dans leur champ propre et une fois dans
+ * le bloc en lecture seule.
+ */
+export const POSTAL_FIELDS = ['Adresse', 'Ville', 'Code postal'];
+
 /** Libellés français des champs standard. */
 export const FIELD_LABELS = {
   Title: 'Titre',
   UserName: 'Identifiant',
   Password: 'Mot de passe',
-  URL: 'Adresse',
+  // « Adresse » désigne désormais l'adresse postale : l'URL doit dire ce
+  // qu'elle est, sous peine de deux champs homonymes dans la même fiche.
+  URL: 'Adresse web',
   Notes: 'Notes',
 };
 
@@ -131,6 +147,10 @@ export function searchEntries(rows, query) {
       fieldText(entry, 'Title'),
       fieldText(entry, 'UserName'),
       fieldText(entry, 'URL'),
+      // Chercher « Lyon » ou un code postal doit trouver la fiche : c'est
+      // souvent tout ce dont on se souvient d'un compte administratif.
+      fieldText(entry, 'Ville'),
+      fieldText(entry, 'Code postal'),
       groupName(group),
     ].join(' '));
     return haystack.includes(q);
@@ -144,7 +164,8 @@ export function searchEntries(rows, query) {
 export function customFields(entry) {
   const out = [];
   for (const key of entry.fields.keys()) {
-    if (!FIELDS.includes(key)) out.push({ key, value: fieldText(entry, key) });
+    if (FIELDS.includes(key) || POSTAL_FIELDS.includes(key)) continue;
+    out.push({ key, value: fieldText(entry, key) });
   }
   return out;
 }

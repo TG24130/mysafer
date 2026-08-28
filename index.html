@@ -332,9 +332,28 @@
       </div>
 
       <label class="field">
-        <span class="field-label">Adresse</span>
+        <span class="field-label">Adresse web</span>
         <input type="text" id="d-url" autocomplete="off" inputmode="url">
       </label>
+
+      <!-- Adresse postale. Enregistrée en champs personnalisés KDBX, donc
+           lisible et modifiable dans KeePassXC comme dans KeePassDX : rien
+           n'est perdu à l'export. -->
+      <label class="field">
+        <span class="field-label">Adresse</span>
+        <input type="text" id="d-street" autocomplete="off">
+      </label>
+
+      <div class="field-pair">
+        <label class="field">
+          <span class="field-label">Code postal</span>
+          <input type="text" id="d-zip" autocomplete="off" inputmode="numeric">
+        </label>
+        <label class="field">
+          <span class="field-label">Ville</span>
+          <input type="text" id="d-city" autocomplete="off">
+        </label>
+      </div>
 
       <label class="field">
         <span class="field-label">Répertoire</span>

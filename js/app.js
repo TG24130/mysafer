@@ -12,7 +12,7 @@ import {
 } from './vaultDb.js';
 import {
   fieldText, groupName, flattenGroups, entriesOf, allEntries,
-  sortByTitle, searchEntries, customFields, urlHost, FIELDS,
+  sortByTitle, searchEntries, customFields, urlHost, FIELDS, POSTAL_FIELDS,
 } from './vaultModel.js';
 import { generatePassphrase, generatePassword, passphraseBits, passwordBits } from './generator.js';
 import { createLockTimer, attachActivityListeners, DEFAULT_TIMEOUT_MS } from './lockTimer.js';
@@ -372,6 +372,7 @@ function visibleRows() {
 }
 
 function renderEntries() {
+  ligneOuverte = null;
   const rows = visibleRows();
   const list = $('entry-list');
   list.textContent = '';
@@ -384,6 +385,72 @@ function renderEntries() {
 
   for (const { entry, group } of rows) list.append(entryItem(entry, group));
   $('entry-empty').hidden = rows.length > 0;
+}
+
+// Distance de révélation, en pixels : la largeur de la touche découverte.
+const REVELATION = 108;
+
+// Une seule ligne ouverte à la fois. Deux touches rouges visibles ensemble,
+// c'est une suppression de trop tôt ou tard.
+let ligneOuverte = null;
+
+function fermerLigne() {
+  if (!ligneOuverte) return;
+  ligneOuverte.classList.remove('is-open');
+  ligneOuverte.style.removeProperty('--glisse');
+  ligneOuverte = null;
+}
+
+/**
+ * Rend une ligne balayable vers la gauche.
+ *
+ * Le suivi ne se verrouille en horizontal qu'après un déplacement franc et
+ * majoritairement latéral : sans cette condition, un pouce qui fait défiler la
+ * liste ouvrirait des lignes au passage. Tant que le verrou n'est pas pris, le
+ * défilement vertical reste au navigateur.
+ */
+function rendreBalayable(li, slide) {
+  let x0 = 0;
+  let y0 = 0;
+  let axe = null;        // null tant qu'on ne sait pas, puis 'x' ou 'y'
+  let dx = 0;
+
+  slide.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    if (ligneOuverte && ligneOuverte !== li) fermerLigne();
+    x0 = e.touches[0].clientX;
+    y0 = e.touches[0].clientY;
+    axe = null;
+    dx = 0;
+  }, { passive: true });
+
+  slide.addEventListener('touchmove', (e) => {
+    if (e.touches.length !== 1) return;
+    const ex = e.touches[0].clientX - x0;
+    const ey = e.touches[0].clientY - y0;
+
+    if (axe === null) {
+      if (Math.abs(ex) < 12 && Math.abs(ey) < 12) return;
+      axe = Math.abs(ex) > Math.abs(ey) ? 'x' : 'y';
+    }
+    if (axe !== 'x') return;
+
+    const base = li.classList.contains('is-open') ? -REVELATION : 0;
+    dx = Math.max(-REVELATION, Math.min(0, base + ex));
+    li.style.setProperty('--glisse', dx + 'px');
+  }, { passive: true });
+
+  const relacher = () => {
+    if (axe !== 'x') { axe = null; return; }
+    axe = null;
+    const ouvrir = dx < -REVELATION / 2;
+    li.style.removeProperty('--glisse');
+    li.classList.toggle('is-open', ouvrir);
+    ligneOuverte = ouvrir ? li : (ligneOuverte === li ? null : ligneOuverte);
+  };
+
+  slide.addEventListener('touchend', relacher, { passive: true });
+  slide.addEventListener('touchcancel', relacher, { passive: true });
 }
 
 function entryItem(entry, group) {
@@ -405,7 +472,12 @@ function entryItem(entry, group) {
   sub.textContent = bits.join(' · ');
 
   open.append(title, sub);
-  open.addEventListener('click', () => openDetail(entry, group));
+  open.addEventListener('click', () => {
+    // Une ligne ouverte se referme au lieu d'ouvrir la fiche : sinon le geste
+    // suivant après un balayage tombe sur un écran qu'on n'a pas demandé.
+    if (li.classList.contains('is-open')) { fermerLigne(); return; }
+    openDetail(entry, group);
+  });
 
   const copy = document.createElement('button');
   copy.type = 'button';
@@ -413,7 +485,29 @@ function entryItem(entry, group) {
   copy.textContent = 'Copier';
   copy.addEventListener('click', () => copyToClipboard(fieldText(entry, 'Password'), copy));
 
-  li.append(open, copy);
+  // Logement : la touche rouge attend sous le capuchon, découverte par le
+  // balayage. Elle double le bouton du panneau de détail, qui reste le chemin
+  // accessible au clavier ; d'où aria-hidden, pour ne pas annoncer deux fois
+  // la même action ni piéger le focus sur un élément hors écran.
+  const logement = document.createElement('div');
+  logement.className = 'entry-slot';
+  const supprimer = document.createElement('button');
+  supprimer.type = 'button';
+  supprimer.className = 'key key-danger entry-remove';
+  supprimer.textContent = 'Supprimer';
+  supprimer.tabIndex = -1;
+  supprimer.setAttribute('aria-hidden', 'true');
+  supprimer.addEventListener('click', async () => {
+    if (!(await demanderSuppression(entry))) fermerLigne();
+  });
+  logement.append(supprimer);
+
+  const slide = document.createElement('div');
+  slide.className = 'entry-slide';
+  slide.append(open, copy);
+  rendreBalayable(li, slide);
+
+  li.append(logement, slide);
   return li;
 }
 
@@ -454,6 +548,15 @@ function updateStrength() {
   el.textContent = '≈ ' + Math.round(passwordBits(v.length, alphabet || 1)) + ' bits';
 }
 
+// Les trois champs postaux sont des champs personnalisés KDBX. La table est
+// définie une fois : ajouter un champ ici suffit, ouverture et enregistrement
+// suivent.
+const CHAMPS_POSTAUX = [
+  ['Adresse', 'd-street'],
+  ['Code postal', 'd-zip'],
+  ['Ville', 'd-city'],
+];
+
 function openDetail(entry, group) {
   editing = entry;
   creatingInGroup = null;
@@ -464,6 +567,7 @@ function openDetail(entry, group) {
   $('d-username').value = fieldText(entry, 'UserName');
   $('d-password').value = fieldText(entry, 'Password');
   $('d-url').value = fieldText(entry, 'URL');
+  for (const [champ, id] of CHAMPS_POSTAUX) $(id).value = fieldText(entry, champ);
   $('d-notes').value = fieldText(entry, 'Notes');
   fillGroupSelect(String(group.uuid));
 
@@ -500,7 +604,8 @@ function openNewEntry() {
   $('detail-title').textContent = 'Nouvelle entrée';
   $('btn-delete').hidden = true;
 
-  for (const id of ['d-title', 'd-username', 'd-password', 'd-url', 'd-notes']) $(id).value = '';
+  for (const id of ['d-title', 'd-username', 'd-password', 'd-url', 'd-notes',
+    ...CHAMPS_POSTAUX.map(([, id2]) => id2)]) $(id).value = '';
   fillGroupSelect(String(creatingInGroup.uuid));
   $('d-custom').hidden = true;
   $('d-custom').textContent = '';
@@ -516,7 +621,8 @@ function closeDetail() {
   editing = null;
   creatingInGroup = null;
   // Ne pas laisser un mot de passe en clair dans le DOM après fermeture.
-  for (const id of ['d-title', 'd-username', 'd-password', 'd-url', 'd-notes']) {
+  for (const id of ['d-title', 'd-username', 'd-password', 'd-url', 'd-notes',
+    ...CHAMPS_POSTAUX.map(([, id2]) => id2)]) {
     const el = $(id);
     if (el) el.value = '';
   }
@@ -543,6 +649,15 @@ async function saveDetail(e) {
   entry.fields.set('UserName', $('d-username').value);
   entry.fields.set('URL', $('d-url').value);
   entry.fields.set('Notes', $('d-notes').value);
+
+  // Un champ postal vide est retiré plutôt qu'enregistré à blanc : sinon
+  // chaque fiche traînerait trois champs personnalisés vides, visibles comme
+  // tels dans KeePassXC.
+  for (const [champ, id] of CHAMPS_POSTAUX) {
+    const valeur = $(id).value.trim();
+    if (valeur) entry.fields.set(champ, valeur);
+    else entry.fields.delete(champ);
+  }
   // Le mot de passe est stocké en ProtectedValue : chiffré en mémoire par
   // kdbxweb et marqué « protégé » dans le fichier KDBX.
   entry.fields.set('Password', kdbxweb.ProtectedValue.fromString($('d-password').value));
