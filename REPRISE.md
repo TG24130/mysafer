@@ -373,6 +373,34 @@ d'écraser. Reste non éprouvés : les deux boutons de résolution eux-mêmes.
 
 Pour reproduire le conflit à volonté, c'est cette séquence-là.
 
+### Déploiement — fait (2026-08-28)
+
+Le site est en ligne : **https://tg24130.github.io/mysafer/**, dépôt public
+`TG24130/mysafer`, GitHub Pages depuis la branche `main`, racine du dépôt.
+
+Vérifié en production : pas de bandeau orange (le site parle bien au projet
+`coffre-fort-ae72c`), connexion, création d'un coffre et synchronisation
+réussie. La CORS du bucket de production a été posée sur l'origine
+`https://tg24130.github.io`.
+
+Points à connaître pour la suite :
+
+- Le site est servi depuis un **sous-chemin** `/mysafer/`. Tous les chemins du
+  projet sont relatifs, `start_url` et `scope` du manifeste compris — ne pas
+  introduire de chemin absolu, il casserait le déploiement sans casser le
+  développement local.
+- **Une seule origine autorisée par bucket**, délibérément : la production
+  n'accepte que le site déployé, le test n'accepte que le serveur local. Une
+  session locale ne peut donc pas écrire dans le vrai coffre, même par erreur.
+  Les commandes des deux projets sont dans `cors-commande.txt`.
+- Vérifier la CORS d'un bucket en `curl` ne sert à rien : `firebasestorage`
+  répond `Access-Control-Allow-Origin: *` de façon générique sur les chemins
+  d'API, indépendamment de la configuration du bucket. Seul un essai depuis la
+  vraie origine, dans un navigateur, tranche.
+- Ni `gh` ni identité git globale sur ce poste. L'identité est posée au niveau
+  du dépôt ; la création d'un dépôt passe par github.com, le serveur GitHub MCP
+  étant en lecture seule.
+
 ### Reste à faire
 
 **Aucune vraie donnée avant le point 1.** Il n'est pas négociable : c'est le
@@ -491,10 +519,17 @@ Recherche des briques : `../Quittance-Facile/.github-research/latest.md`
 
 ## Avertissement
 
-**Ne pas encore y mettre de vrais mots de passe.** La synchronisation existe
-désormais et fonctionne, mais uniquement contre le projet de **test** : le
-bucket de production n'a pas d'autorisation CORS et rien n'est déployé en HTTPS.
-La sauvegarde indépendante (phase 6) n'existe pas non plus, et vider les données
-du navigateur sur le seul appareil synchronisé reste destructeur.
+Le coffre est désormais **en service réel** : synchronisé, sauvegardé par copies
+horodatées, protégé contre l'écrasement. Deux réserves demeurent, à lever avant
+de lui confier ce qui compte vraiment.
 
-Les coffres présents sont des coffres de test, au contenu sans valeur.
+**Faire un export sur disque, et vérifier qu'il s'ouvre dans KeePassXC.** Les
+copies horodatées vivent toutes chez le même hébergeur, sous le même compte : un
+compte fermé les emporterait ensemble. Un fichier sur disque est la seule copie
+qui ne dépende de personne — et l'ouvrir dans KeePassXC est la seule preuve
+qu'une base de code entièrement étrangère sait le lire. Tant que ce n'est pas
+fait, le format n'est validé que par l'implémentation qui l'a écrit.
+
+**Perdre la phrase maîtresse reste sans recours** (décision 3). Aucune
+récupération n'existe, ni ici ni ailleurs.
+
