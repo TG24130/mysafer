@@ -401,6 +401,52 @@ Points à connaître pour la suite :
   du dépôt ; la création d'un dépôt passe par github.com, le serveur GitHub MCP
   étant en lecture seule.
 
+### Phase 5 — ouverture biométrique (2026-08-28)
+
+**Ce qui est emballé, et pourquoi ce n'est pas la clé maître.** Le plan prévoyait
+d'emballer la clé `K`. kdbxweb ne l'expose pas : il n'offre que les identifiants
+qui servent à la produire. On emballe donc la **phrase maîtresse** elle-même.
+Conséquence à connaître : le déverrouillage biométrique refait la dérivation
+Argon2 — 209 ms sur iPhone, ~1,2 s sur le PC. Le gain visé n'est pas la vitesse
+mais de ne plus ressaisir six mots.
+
+**Découpage**, cohérent avec le reste du projet : `js/keyWrap.js` ne connaît ni
+WebAuthn ni le DOM — il reçoit un secret brut, dérive une clé AES-GCM par HKDF
+et emballe la phrase. Il est donc testable sous Node, où WebCrypto existe mais
+pas WebAuthn : 8 tests, dont le refus d'un secret erroné et d'un paquet altéré.
+`js/deviceKey.js` porte la plomberie WebAuthn.
+
+**Trois contraintes du plan tenues explicitement :**
+
+- Sur un appareil neuf, la phrase maîtresse d'abord, toujours. Le paquet emballé
+  vit dans IndexedDB, donc par appareil : un appareil qui n'a rien ne peut rien
+  déballer.
+- PRF n'est pas universel. L'option est masquée si l'appareil ne sait pas la
+  faire, et le chemin par la phrase n'est jamais retiré — il reste affiché sous
+  le bouton biométrique, séparé par un « ou ».
+- L'enrôlement est lié au `rpId`, donc au domaine. Il se fait sur
+  `tg24130.github.io`, pas sur localhost. **Un changement d'adresse casserait
+  tous les enrôlements existants.**
+
+**Deux invites biométriques à l'enrôlement**, et c'est normal : plusieurs
+navigateurs ne renvoient pas la sortie PRF à la création, seulement à
+l'authentification. La seconde vérifie du même coup que le secret existe
+vraiment sur cet appareil, plutôt que de le découvrir au premier
+déverrouillage.
+
+**L'activation redemande la phrase** au lieu de réutiliser celle de l'ouverture.
+Aucune phrase en clair ne traîne pendant la session, et on ne peut pas enrôler
+une phrase erronée — ce qui produirait un déverrouillage biométrique
+définitivement inopérant.
+
+**Désactiver n'efface pas la clé WebAuthn** : aucune API ne le permet depuis une
+page. Elle devient inutilisée et se supprime dans les réglages du système. Le
+paquet emballé, lui, disparaît — c'est ce qui compte.
+
+**Vérifié** : interface, détection de l'authentificateur, masquage correct hors
+enrôlement, aucune erreur de console. **Reste à éprouver** : l'enrôlement et le
+déverrouillage réels, sur PC puis sur iPhone.
+
 ### Reste à faire
 
 **Aucune vraie donnée avant le point 1.** Il n'est pas négociable : c'est le
@@ -449,9 +495,9 @@ dans le terrain de l'incident d'août.
 | 2 | Répertoires, détail d'entrée, générateur, recherche | fait |
 | 3 | Verrouillage 5 min, presse-papiers, Argon2 en worker | fait |
 | 4 | Synchronisation Firebase Storage + fusion | fait |
-| 5 | **Ouverture biométrique (WebAuthn PRF)** | **à faire — prochaine** |
+| 5 | Ouverture biométrique (WebAuthn PRF) | écrite, à éprouver sur les appareils |
 | 6 | Sauvegarde indépendante | fait |
-| 7 | Passe de design | à faire |
+| 7 | **Passe de design** | **à faire — prochaine** |
 
 Plan complet : `~/.claude/plans/polymorphic-foraging-dolphin.md`
 Recherche des briques : `../Quittance-Facile/.github-research/latest.md`

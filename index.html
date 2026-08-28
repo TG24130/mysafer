@@ -33,6 +33,14 @@
 
     <form id="form-unlock" hidden autocomplete="off">
       <p id="unlock-sub" class="lock-sub">Saisissez votre phrase de passe maître.</p>
+
+      <!-- Visible seulement si cet appareil est enrôlé. Le chemin par la phrase
+           maîtresse reste toujours disponible en dessous : la biométrie est un
+           raccourci, jamais un passage obligé. -->
+      <button type="button" id="btn-bio-unlock" class="btn btn-primary btn-block" hidden>
+        Déverrouiller avec la biométrie
+      </button>
+      <p id="bio-sep" class="bio-sep" hidden>ou</p>
       <label class="field">
         <span class="field-label">Phrase de passe maître</span>
         <input type="password" id="input-master" autocomplete="current-password"
@@ -142,6 +150,28 @@
       <button type="button" id="btn-export" class="btn btn-ghost btn-block">
         Exporter le coffre
       </button>
+
+      <!-- Ouverture biométrique. Masquée si l'appareil ne sait pas la faire :
+           inutile d'exposer une option qui échouerait. -->
+      <section id="bio-box" class="bio" hidden>
+        <h2 class="bio-title">Ouverture biométrique</h2>
+        <p id="bio-state" class="bio-state"></p>
+
+        <form id="form-bio-enrol" hidden autocomplete="off">
+          <label class="field">
+            <span class="field-label">Confirmez la phrase maîtresse</span>
+            <input type="password" id="input-bio-master"
+                   autocomplete="current-password" required>
+          </label>
+          <button type="submit" class="btn btn-ghost btn-block">Activer</button>
+        </form>
+
+        <button type="button" id="btn-bio-disable" class="btn btn-ghost btn-block" hidden>
+          Désactiver
+        </button>
+        <p id="bio-error" class="error" role="alert" hidden></p>
+      </section>
+
     </nav>
 
     <section class="main-panel">

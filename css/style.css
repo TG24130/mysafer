@@ -629,3 +629,36 @@ textarea { resize: vertical; }
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* --- Ouverture biométrique --- */
+
+.bio {
+  margin: var(--gap) 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.bio-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.bio-state {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+/* Séparateur entre le raccourci biométrique et la saisie de la phrase : il doit
+   rester évident que le second chemin existe toujours. */
+.bio-sep {
+  margin: 12px 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-dim);
+}

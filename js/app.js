@@ -22,6 +22,10 @@ import {
   syncNow, downloadRemoteVault, adoptRemoteVault, canSync, syncErrorMessage,
   remplacerDistant, ConflitCoffre,
 } from './syncController.js';
+import {
+  biometrieDisponible, estEnrole, enroler, deverrouiller as deverrouillerBio,
+  desactiver as desactiverBio, messageErreur as messageErreurBio,
+} from './deviceKey.js';
 
 // Protection anti-cadrage. GitHub Pages ne permet pas de définir l'en-tête
 // X-Frame-Options ni frame-ancestors, et `frame-ancestors` est ignoré en
@@ -81,6 +85,7 @@ function showVault() {
   renderEntries();
   armLock();
   majRappelExport();
+  majBiometrie();
 }
 
 /**
@@ -101,6 +106,7 @@ function lockVault(raison) {
   $('input-search').value = '';
 
   $('sync-conflict').hidden = true;
+  majBioDeverrouillage();
   showLock();
   setError(raison === 'inactivité'
     ? 'Coffre verrouillé après 5 minutes sans activité.'
@@ -769,10 +775,105 @@ async function refreshLockScreen() {
     ? 'Coffre récupéré en ligne. Saisissez votre phrase de passe maître pour l’installer sur cet appareil.'
     : 'Saisissez votre phrase de passe maître.';
 
+  majBioDeverrouillage();
+
   if (!$('screen-lock').hidden) {
     (déverrouiller ? $('input-master') : $('input-new-master')).focus();
   }
 }
+
+// ---------------------------------------------------------------------------
+// Ouverture biométrique
+// ---------------------------------------------------------------------------
+
+function setBioErreur(msg) {
+  $('bio-error').textContent = msg || '';
+  $('bio-error').hidden = !msg;
+}
+
+/** Écran de verrouillage : proposer le raccourci si cet appareil est enrôlé. */
+async function majBioDeverrouillage() {
+  const dispo = (await estEnrole()) && (await biometrieDisponible());
+  $('btn-bio-unlock').hidden = !dispo;
+  $('bio-sep').hidden = !dispo;
+}
+
+/** Panneau du coffre : état de l'enrôlement et action correspondante. */
+async function majBiometrie() {
+  const box = $('bio-box');
+  if (!(await biometrieDisponible())) {
+    // Ni option ni explication : afficher une fonction impossible n'aiderait
+    // personne. Le diagnostic, lui, dit pourquoi.
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  setBioErreur('');
+
+  const enrole = await estEnrole();
+  $('bio-state').textContent = enrole
+    ? 'Activée sur cet appareil. Le déverrouillage par phrase maîtresse reste toujours possible.'
+    : 'Déverrouillez par empreinte, visage ou code d’appareil, sans ressaisir la phrase. L’enrôlement ne vaut que pour cet appareil et ce navigateur.';
+  $('form-bio-enrol').hidden = enrole;
+  $('btn-bio-disable').hidden = !enrole;
+  $('input-bio-master').value = '';
+}
+
+$('btn-bio-unlock').addEventListener('click', async () => {
+  setError('');
+  setBusy(true);
+  try {
+    const phrase = await deverrouillerBio();
+    db = await openVault(await loadVaultBytes(), phrase);
+    selectedGroupUuid = null;
+    $('input-search').value = '';
+    showVault();
+    syncInBackground();
+  } catch (err) {
+    // Le chemin par la phrase maîtresse reste sous les yeux : un échec ici
+    // n'enferme personne dehors.
+    setError(messageErreurBio(err));
+    $('input-master').focus();
+  } finally {
+    setBusy(false);
+  }
+});
+
+$('form-bio-enrol').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  setBioErreur('');
+  const phrase = $('input-bio-master').value;
+
+  // On revérifie la phrase contre le coffre enregistré plutôt que de garder
+  // celle de l'ouverture en mémoire. Deux raisons : aucune phrase en clair ne
+  // traîne pendant la session, et on ne peut pas enrôler une phrase erronée,
+  // ce qui produirait un déverrouillage biométrique définitivement inopérant.
+  try {
+    await openVault(await loadVaultBytes(), phrase);
+  } catch (err) {
+    setBioErreur(isWrongPassword(err)
+      ? 'Phrase de passe maître incorrecte.'
+      : 'Vérification impossible : ' + (err && err.message ? err.message : String(err)));
+    return;
+  }
+
+  try {
+    await enroler(phrase);
+    $('input-bio-master').value = '';
+    await majBiometrie();
+  } catch (err) {
+    setBioErreur(messageErreurBio(err));
+  }
+});
+
+$('btn-bio-disable').addEventListener('click', async () => {
+  if (!confirm(
+    "L'ouverture biométrique sera désactivée sur cet appareil.\n\n"
+    + 'Le coffre restera accessible par la phrase maîtresse. Continuer ?')) return;
+  await desactiverBio();
+  await majBiometrie();
+  setBioErreur('');
+});
 
 // ---------------------------------------------------------------------------
 // Compte de synchronisation
