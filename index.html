@@ -9,59 +9,84 @@
   `'wasm-unsafe-eval'` est requis par Argon2 en WebAssembly ; c'est une
   directive bien plus étroite que `'unsafe-eval'`, elle n'autorise pas
   l'évaluation de chaînes JavaScript.
-  `connect-src` devra être élargi aux domaines Firebase à la phase 4 — et à eux
-  seuls.
   Note : `frame-ancestors` est inopérant en <meta> ; la protection anti-cadrage
   est faite en JavaScript dans js/app.js, faute de pouvoir définir des en-têtes
   sur GitHub Pages.
 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebasestorage.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="theme-color" content="#11141b">
+<meta name="theme-color" content="#22262B">
 <meta name="color-scheme" content="dark light">
-<title>Coffre</title>
+<title>MySafer</title>
 <link rel="manifest" href="./manifest.json">
 <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
+<!--
+  THESIS: MySafer est un appareil posé sur le bureau, pas une liste dans une
+  application. Chaque entrée est une touche large qu'on presse ; une seule
+  couleur, l'orange sécurité, commet le geste qui compte — copier. Refuse le
+  fond noir à accent néon, cartes vitrées et cadenas que livrent tous les
+  gestionnaires de mots de passe.
+  OWN-WORLD: châssis gunmetal comme structure, surfaces de travail en os et
+  mastic occupant l'essentiel de l'écran, légendes mono capitales très
+  espacées, orange sécurité réservé au geste unique, écran ambre minuscule pour
+  l'état vivant. Grille en unités de touche entières, relief franc, aucun
+  dégradé décoratif, aucune ombre douce.
+  STORY: l'utilisateur ouvre son appareil, lit l'état d'un coup d'œil, trouve
+  son entrée et presse la touche orange. Il repart avec le mot de passe.
+  FIRST VIEWPORT: bandeau d'état ambre en haut, recherche pleine largeur sous
+  lui, puis la pile d'entrées en touches os pleine largeur, chacune portant son
+  titre gravé et sa touche orange COPIER à droite. Barre de modes en bas, sous
+  le pouce.
+  FORM: matériel de création, instrument de bureau ; retenu par l'utilisateur
+  contre l'assignation du tirage ; seed 660b8c59.
+  FINISH: unreviewed and undocumented is unfinished; this build ends with the
+  finish review, the verdict, and DESIGN.md
+-->
 
-<noscript><p class="notice">Ce coffre nécessite JavaScript.</p></noscript>
+<noscript><p class="notice">MySafer nécessite JavaScript.</p></noscript>
 
-<!-- Écran de démarrage : création ou déverrouillage -->
-<main id="screen-lock" class="screen" hidden>
-  <div class="lock-card">
-    <h1 class="lock-title">Coffre</h1>
+<!-- Écran de démarrage : la face avant de l'appareil -->
+<main id="screen-lock" class="screen screen-lock" hidden>
+  <div class="lock-card unit">
+
+    <div class="unit-head">
+      <h1 class="unit-name">MySafer</h1>
+      <p class="unit-ref">Coffre personnel · KDBX 4</p>
+    </div>
 
     <form id="form-unlock" hidden autocomplete="off">
-      <p id="unlock-sub" class="lock-sub">Saisissez votre phrase de passe maître.</p>
+      <p id="unlock-sub" class="readout">Saisissez votre phrase de passe maître.</p>
 
       <!-- Visible seulement si cet appareil est enrôlé. Le chemin par la phrase
            maîtresse reste toujours disponible en dessous : la biométrie est un
            raccourci, jamais un passage obligé. -->
-      <button type="button" id="btn-bio-unlock" class="btn btn-primary btn-block" hidden>
-        Déverrouiller avec la biométrie
+      <button type="button" id="btn-bio-unlock" class="key key-action key-block" hidden>
+        Déverrouiller par biométrie
       </button>
-      <p id="bio-sep" class="bio-sep" hidden>ou</p>
+      <p id="bio-sep" class="sep" hidden><span>ou</span></p>
+
       <label class="field">
         <span class="field-label">Phrase de passe maître</span>
         <input type="password" id="input-master" autocomplete="current-password"
                required autofocus>
       </label>
-      <button type="submit" class="btn btn-primary">Déverrouiller</button>
+      <button type="submit" class="key key-action key-block">Déverrouiller</button>
     </form>
 
     <form id="form-create" hidden autocomplete="off">
-      <p class="lock-sub">Aucun coffre sur cet appareil.</p>
-      <p id="create-hint" class="hint" hidden>
+      <p class="readout">Aucun coffre sur cet appareil.</p>
+      <p id="create-hint" class="note note-warn" hidden>
         Si vous avez déjà un coffre, connectez-vous ci-dessus pour le récupérer
         plutôt que d'en créer un second — les deux ne pourraient pas fusionner.
       </p>
 
       <div class="gen-master">
-        <button type="button" id="btn-gen-master" class="btn btn-ghost">
+        <button type="button" id="btn-gen-master" class="key key-block">
           Générer une phrase de 6 mots
         </button>
         <output id="gen-master-out" class="gen-out" hidden></output>
-        <p id="gen-master-hint" class="warn" hidden>
+        <p id="gen-master-hint" class="note note-warn" hidden>
           Notez-la sur papier avant de continuer. Elle ne peut pas être
           retrouvée.
         </p>
@@ -77,23 +102,23 @@
         <input type="password" id="input-new-master2" autocomplete="new-password"
                required minlength="8">
       </label>
-      <p class="warn">
+      <p class="note note-warn">
         Cette phrase ne peut pas être réinitialisée. Si elle est perdue, le
         coffre est définitivement illisible.
       </p>
-      <button type="submit" class="btn btn-primary">Créer le coffre</button>
+      <button type="submit" class="key key-action key-block">Créer le coffre</button>
     </form>
 
-    <p id="lock-error" class="error" role="alert" hidden></p>
-    <p id="lock-busy" class="busy" role="status" hidden>Dérivation de la clé…</p>
+    <p id="lock-error" class="note note-alert" role="alert" hidden></p>
+    <p id="lock-busy" class="note note-live" role="status" hidden>Dérivation de la clé…</p>
 
-    <!-- Compte de synchronisation. Facultatif : le coffre s'ouvre et
-         s'utilise sans compte, hors ligne. Se connecter ne sert qu'à
-         retrouver le coffre sur un autre appareil. -->
+    <!-- Compte de synchronisation. Facultatif : le coffre s'ouvre et s'utilise
+         sans compte, hors ligne. Se connecter ne sert qu'à retrouver le coffre
+         sur un autre appareil. -->
     <section class="account" aria-labelledby="account-title">
-      <h2 id="account-title" class="account-title">Synchronisation</h2>
+      <h2 id="account-title" class="plate">Synchronisation</h2>
 
-      <p id="account-state" class="account-state" role="status">Non connecté.</p>
+      <p id="account-state" class="readout" role="status">Non connecté.</p>
 
       <form id="form-signin" class="signin" hidden autocomplete="on">
         <label class="field">
@@ -105,84 +130,50 @@
           <input type="password" id="input-account-password"
                  autocomplete="current-password" required>
         </label>
-        <p class="hint">
+        <p class="note">
           Ce mot de passe n'est pas la phrase de passe maître et ne déchiffre
           rien. Il sert seulement à retrouver votre coffre en ligne.
         </p>
-        <button type="submit" class="btn btn-primary">Se connecter</button>
+        <button type="submit" class="key key-action key-block">Se connecter</button>
       </form>
 
-      <button type="button" id="btn-signin-toggle" class="btn btn-ghost btn-block">
+      <button type="button" id="btn-signin-toggle" class="key key-block">
         Se connecter
       </button>
-      <button type="button" id="btn-signout" class="btn btn-ghost btn-block" hidden>
+      <button type="button" id="btn-signout" class="key key-block" hidden>
         Se déconnecter
       </button>
     </section>
 
-    <!-- La page de diagnostic n'était atteignable qu'en tapant son adresse à la
-         main, ce qui est peu praticable sur téléphone — or c'est précisément
-         l'appareil sur lequel elle doit tourner. -->
     <p class="diag-access">
       <a href="./diagnostic.html">Diagnostic de cet appareil</a>
     </p>
   </div>
 </main>
 
-<!-- Coffre déverrouillé -->
-<div id="screen-vault" class="screen" hidden>
+<!-- Coffre déverrouillé : le plan de travail de l'appareil -->
+<div id="screen-vault" class="screen screen-vault" hidden>
+
+  <!-- Bandeau d'état. Réduit à l'essentiel : ce que fait l'appareil, et la
+       touche qui le referme. Le titre « Coffre » n'apprenait rien et
+       encombrait la largeur d'un téléphone. -->
   <header class="topbar">
-    <button type="button" id="btn-groups" class="btn btn-ghost btn-icon"
-            aria-expanded="false" aria-controls="group-panel">Répertoires</button>
-    <h1 class="topbar-title">Coffre</h1>
-    <span id="sync-status" class="sync-status" role="status"></span>
-  <span id="lock-countdown" class="lock-countdown" role="status"></span>
-    <button type="button" id="btn-lock" class="btn btn-ghost">Verrouiller</button>
+    <p class="screenlet" role="status">
+      <span class="screenlet-label">État</span>
+      <span id="sync-status" class="screenlet-value">Prêt</span>
+      <span id="lock-countdown" class="screenlet-alt"></span>
+    </p>
+    <button type="button" id="btn-lock" class="key key-lock">Verrouiller</button>
   </header>
 
   <div class="layout">
-    <!-- Arborescence des répertoires -->
-    <nav id="group-panel" class="group-panel" aria-label="Répertoires">
-      <ul id="group-list" class="group-list"></ul>
-      <button type="button" id="btn-add-group" class="btn btn-ghost btn-block">
-        Nouveau répertoire
-      </button>
-      <!-- Exporter vit ici et non dans la barre du haut : c'est une action de
-           maintenance, pas un geste quotidien, et la barre débordait sur les
-           écrans étroits. -->
-      <p id="export-reminder" class="export-reminder" role="status" hidden></p>
-      <button type="button" id="btn-export" class="btn btn-ghost btn-block">
-        Exporter le coffre
-      </button>
 
-      <!-- Ouverture biométrique. Masquée si l'appareil ne sait pas la faire :
-           inutile d'exposer une option qui échouerait. -->
-      <section id="bio-box" class="bio" hidden>
-        <h2 class="bio-title">Ouverture biométrique</h2>
-        <p id="bio-state" class="bio-state"></p>
-
-        <form id="form-bio-enrol" hidden autocomplete="off">
-          <label class="field">
-            <span class="field-label">Confirmez la phrase maîtresse</span>
-            <input type="password" id="input-bio-master"
-                   autocomplete="current-password" required>
-          </label>
-          <button type="submit" class="btn btn-ghost btn-block">Activer</button>
-        </form>
-
-        <button type="button" id="btn-bio-disable" class="btn btn-ghost btn-block" hidden>
-          Désactiver
-        </button>
-        <p id="bio-error" class="error" role="alert" hidden></p>
-      </section>
-
-    </nav>
-
-    <section class="main-panel">
+    <!-- Vue : entrées -->
+    <section class="main-panel view is-current" data-view="entries">
       <div class="toolbar">
         <input type="search" id="input-search" class="search" placeholder="Rechercher"
-               autocomplete="off" spellcheck="false">
-        <button type="button" id="btn-add" class="btn btn-primary">Ajouter</button>
+               autocomplete="off" spellcheck="false" aria-label="Rechercher une entrée">
+        <button type="button" id="btn-add" class="key">Ajouter</button>
       </div>
 
       <!-- Deux coffres sans ancêtre commun. On ne tranche pas à la place de
@@ -201,21 +192,91 @@
           conservée dans l'historique en ligne.
         </p>
         <div class="conflict-actions">
-          <button type="button" id="btn-conflict-pull" class="btn btn-primary">
+          <button type="button" id="btn-conflict-pull" class="key key-action">
             Utiliser le coffre en ligne
           </button>
-          <button type="button" id="btn-conflict-push" class="btn btn-ghost">
+          <button type="button" id="btn-conflict-push" class="key">
             Remplacer le coffre en ligne
           </button>
         </div>
       </div>
 
-      <p id="clip-status" class="clip-status" role="status" hidden></p>
+      <p id="clip-status" class="note note-live" role="status" hidden></p>
       <p id="scope-label" class="scope-label"></p>
       <ul id="entry-list" class="entry-list"></ul>
       <p id="entry-empty" class="empty" hidden>Aucune entrée ici.</p>
     </section>
+
+    <!-- Vue : répertoires -->
+    <nav id="group-panel" class="group-panel view" data-view="groups" aria-label="Répertoires">
+      <h2 class="plate">Répertoires</h2>
+      <ul id="group-list" class="group-list"></ul>
+      <button type="button" id="btn-add-group" class="key key-block">
+        Nouveau répertoire
+      </button>
+    </nav>
+
+    <!-- Vue : réglages. Rassemble ce qui était dispersé dans le panneau des
+         répertoires — sauvegarde, biométrie, diagnostic. -->
+    <section class="settings view" data-view="settings" aria-labelledby="settings-title">
+      <h2 id="settings-title" class="plate">Réglages</h2>
+
+      <section class="rack">
+        <h3 class="rack-title">Sauvegarde</h3>
+        <p id="export-reminder" class="readout" role="status" hidden></p>
+        <button type="button" id="btn-export" class="key key-block">
+          Exporter le coffre
+        </button>
+        <p class="note">
+          Le fichier exporté s'ouvre dans KeePassXC ou KeePassDX. C'est la seule
+          copie qui ne dépende d'aucun compte.
+        </p>
+      </section>
+
+      <!-- Masquée si l'appareil ne sait pas la faire : inutile d'exposer une
+           option qui échouerait. -->
+      <section id="bio-box" class="rack" hidden>
+        <h3 id="bio-title" class="rack-title">Ouverture biométrique</h3>
+        <p id="bio-state" class="readout"></p>
+
+        <form id="form-bio-enrol" hidden autocomplete="off">
+          <label class="field">
+            <span class="field-label">Confirmez la phrase maîtresse</span>
+            <input type="password" id="input-bio-master"
+                   autocomplete="current-password" required>
+          </label>
+          <button type="submit" class="key key-action key-block">Activer</button>
+        </form>
+
+        <button type="button" id="btn-bio-disable" class="key key-block" hidden>
+          Désactiver
+        </button>
+        <p id="bio-error" class="note note-alert" role="alert" hidden></p>
+      </section>
+
+      <section class="rack">
+        <h3 class="rack-title">Appareil</h3>
+        <p class="note">
+          <a href="./diagnostic.html">Diagnostic de cet appareil</a> — vérifie la
+          biométrie, le presse-papiers et les performances.
+        </p>
+      </section>
+    </section>
   </div>
+
+  <!-- Barre de modes, sous le pouce. Trois touches, comme la rangée de modes
+       d'un instrument : l'usage de référence est le téléphone tenu d'une main. -->
+  <nav class="tabbar" aria-label="Sections">
+    <button type="button" class="tab is-current" data-target="entries" aria-current="page">
+      Entrées
+    </button>
+    <button type="button" id="btn-groups" class="tab" data-target="groups">
+      Répertoires
+    </button>
+    <button type="button" class="tab" data-target="settings">
+      Réglages
+    </button>
+  </nav>
 </div>
 
 <!-- Détail d'une entrée -->
@@ -224,59 +285,60 @@
   <form id="form-detail" class="detail-inner" autocomplete="off">
     <header class="detail-head">
       <h2 id="detail-title" class="detail-title">Entrée</h2>
-      <button type="button" id="btn-detail-close" class="btn btn-ghost">Fermer</button>
+      <button type="button" id="btn-detail-close" class="key key-close">Fermer</button>
     </header>
 
-    <label class="field">
-      <span class="field-label">Titre</span>
-      <input type="text" id="d-title" required>
-    </label>
+    <div class="detail-body">
+      <label class="field">
+        <span class="field-label">Titre</span>
+        <input type="text" id="d-title" required>
+      </label>
 
-    <label class="field">
-      <span class="field-label">Identifiant</span>
-      <span class="field-row">
-        <input type="text" id="d-username" autocomplete="off">
-        <button type="button" id="btn-copy-user" class="btn btn-ghost">Copier</button>
-      </span>
-    </label>
+      <label class="field">
+        <span class="field-label">Identifiant</span>
+        <span class="field-row">
+          <input type="text" id="d-username" autocomplete="off">
+          <button type="button" id="btn-copy-user" class="key">Copier</button>
+        </span>
+      </label>
 
-    <label class="field">
-      <span class="field-label">Mot de passe</span>
-      <span class="field-row">
-        <input type="password" id="d-password" autocomplete="off">
-        <button type="button" id="btn-reveal" class="btn btn-ghost"
-                aria-pressed="false">Afficher</button>
-        <button type="button" id="btn-copy-pwd" class="btn btn-ghost">Copier</button>
-      </span>
-    </label>
+      <label class="field">
+        <span class="field-label">Mot de passe</span>
+        <span class="field-row">
+          <input type="password" id="d-password" autocomplete="off">
+          <button type="button" id="btn-reveal" class="key"
+                  aria-pressed="false">Afficher</button>
+          <button type="button" id="btn-copy-pwd" class="key key-action">Copier</button>
+        </span>
+      </label>
 
-    <div class="gen-row">
-      <button type="button" id="btn-gen-phrase" class="btn btn-ghost">Phrase (6 mots)</button>
-      <button type="button" id="btn-gen-pwd" class="btn btn-ghost">Mot de passe (20)</button>
-      <span id="gen-strength" class="gen-strength"></span>
+      <div class="gen-row">
+        <button type="button" id="btn-gen-phrase" class="key">Phrase (6 mots)</button>
+        <button type="button" id="btn-gen-pwd" class="key">Mot de passe (20)</button>
+        <span id="gen-strength" class="gen-strength"></span>
+      </div>
+
+      <label class="field">
+        <span class="field-label">Adresse</span>
+        <input type="text" id="d-url" autocomplete="off" inputmode="url">
+      </label>
+
+      <label class="field">
+        <span class="field-label">Répertoire</span>
+        <select id="d-group" class="select"></select>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Notes</span>
+        <textarea id="d-notes" rows="4"></textarea>
+      </label>
+
+      <div id="d-custom" class="custom-fields" hidden></div>
     </div>
 
-    <label class="field">
-      <span class="field-label">Adresse</span>
-      <input type="text" id="d-url" autocomplete="off" inputmode="url">
-    </label>
-
-    <label class="field">
-      <span class="field-label">Répertoire</span>
-      <select id="d-group" class="select"></select>
-    </label>
-
-    <label class="field">
-      <span class="field-label">Notes</span>
-      <textarea id="d-notes" rows="4"></textarea>
-    </label>
-
-    <div id="d-custom" class="custom-fields" hidden></div>
-
     <div class="detail-actions">
-      <button type="button" id="btn-delete" class="btn btn-danger">Supprimer</button>
-      <span class="spacer"></span>
-      <button type="submit" class="btn btn-primary">Enregistrer</button>
+      <button type="submit" class="key key-action key-block">Enregistrer</button>
+      <button type="button" id="btn-delete" class="key key-danger key-block">Supprimer</button>
     </div>
   </form>
 </div>

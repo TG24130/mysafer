@@ -1,695 +1,1002 @@
-/* Feuille de style provisoire — la passe de design est la phase 7.
-   Objectif ici : lisible, utilisable au pouce, sombre par défaut. */
+/* MySafer — instrument de bureau.
+ *
+ * Le monde : un appareil de création posé sur le plan de travail. Châssis
+ * gunmetal, capuchons de touches en os et mastic, légendes mono gravées en
+ * capitales espacées, un seul orange sécurité pour le geste qui commet, un
+ * écran ambre minuscule pour l'état vivant.
+ *
+ * Deux règles de fabrication qui expliquent tout le reste :
+ *
+ *   1. LES SURFACES DE LECTURE SONT CLAIRES, LA STRUCTURE EST SOMBRE. Le
+ *      châssis encadre, les touches portent le contenu. L'usage de référence
+ *      est le téléphone en plein jour : un fond sombre plein écran y devient
+ *      illisible, alors que de larges plages claires tiennent.
+ *   2. RELIEF FRANC, JAMAIS D'OMBRE DOUCE. Une touche a une arête haute
+ *      claire, une arête basse foncée, et s'enfonce à l'appui. Les ombres
+ *      floues et les dégradés décoratifs appartiennent au monde qu'on refuse.
+ *
+ * Aucune police externe : la CSP interdit toute origine tierce. Les piles
+ * système suffisent, à condition de tenir la graisse et l'espacement.
+ */
+
+/* ---------------------------------------------------------------------------
+   Matériaux
+   --------------------------------------------------------------------------- */
 
 :root {
-  --bg: #11141b;
-  --surface: #181c26;
-  --surface-2: #1f2430;
-  --line: #2a3140;
-  --text: #e8ecf4;
-  --text-dim: #97a1b5;
-  --accent: #7ca9ff;
-  --accent-ink: #0b1020;
-  --danger: #ff8080;
-  --radius: 12px;
-  --gap: 16px;
+  /* Châssis */
+  --chassis: #22262B;
+  --chassis-deep: #16191C;
+  --chassis-edge: #33383E;
+  --chassis-line: #3D444B;
+
+  /* Surfaces de travail : capuchons de touches */
+  --cap: #E9E3D5;
+  --cap-2: #DAD3C2;
+  --cap-edge-hi: #F7F3E9;
+  --cap-edge-lo: #B3AC9A;
+
+  /* Encres */
+  --ink: #1B1E21;
+  --ink-2: #55595E;
+  --ink-on-chassis: #D8D2C4;
+  --ink-on-chassis-dim: #8D9299;
+
+  /* Signaux. Un seul orange, et il commet. */
+  --action: #F4600C;
+  --action-deep: #C24605;
+  --action-ink: #FFFFFF;
+  --live: #F0A500;
+  --danger: #C0392B;
+
+  /* Unité de touche : toute la grille en est un multiple entier. */
+  --u: 4px;
+  --key-h: 52px;
+  --radius: 3px;
+  --gap: calc(var(--u) * 4);
 }
 
+/* Le mode clair n'inverse pas le monde : il éclaircit le châssis, comme un
+   appareil vu en plein jour. Les capuchons ne bougent pas — ce sont eux qui
+   portent le texte, et leur contraste est le point. */
 @media (prefers-color-scheme: light) {
   :root {
-    --bg: #f4f6fa;
-    --surface: #ffffff;
-    --surface-2: #eef1f7;
-    --line: #d8dee9;
-    --text: #131722;
-    --text-dim: #5b6779;
-    --accent: #2f6bdc;
-    --accent-ink: #ffffff;
-    --danger: #b3261e;
+    --chassis: #6E747B;
+    --chassis-deep: #565C63;
+    --chassis-edge: #858B92;
+    --chassis-line: #9AA0A7;
+    --ink-on-chassis: #FBF9F4;
+    --ink-on-chassis-dim: #E2E0D8;
   }
 }
 
-* { box-sizing: border-box; }
+/* ---------------------------------------------------------------------------
+   Socle
+   --------------------------------------------------------------------------- */
 
-html, body {
-  margin: 0;
-  padding: 0;
-  min-height: 100%;
-}
+*, *::before, *::after { box-sizing: border-box; }
+
+/* `hidden` doit gagner contre toute règle de disposition. Les touches et les
+   vues déclarent `display: flex` ou `block` ; sans cette ligne, un élément
+   masqué par le script reste visible — le bouton « Se déconnecter » s'affichait
+   ainsi alors que personne n'était connecté. */
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  -webkit-text-size-adjust: 100%;
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--chassis-deep);
+  color: var(--ink-on-chassis);
+  font: 400 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* L'attribut `hidden` doit l'emporter sur toute règle de mise en page. Le
-   sélecteur d'identifiant de #screen-lock plus bas a une spécificité
-   supérieure à `.screen[hidden]` : sans `:not([hidden])`, masquer l'écran de
-   verrouillage n'avait aucun effet et il restait affiché par-dessus le coffre
-   déverrouillé. */
+/* Toute la signalétique est mono, en capitales espacées : c'est la gravure de
+   l'appareil. Le texte long, lui, reste en pile système pour rester lisible. */
+.legend, .key, .tab, .field-label, .plate, .rack-title, .screenlet,
+.unit-ref, .entry-title, .entry-sub, .scope-label, .gen-out, .gen-strength {
+  font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono",
+    "Roboto Mono", Menlo, Consolas, monospace;
+}
+
+.notice {
+  margin: 0;
+  padding: var(--gap);
+  background: var(--danger);
+  color: #fff;
+}
+
 .screen[hidden] { display: none; }
 
-/* --- Écran de verrouillage --- */
+/* ---------------------------------------------------------------------------
+   Touches — l'atome de l'interface
+   --------------------------------------------------------------------------- */
 
-#screen-lock:not([hidden]) {
+.key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--key-h);
+  padding: 0 calc(var(--u) * 4);
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--cap);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-align: center;
+  cursor: pointer;
+  /* Relief de capuchon : arête haute claire, arête basse foncée, assise. */
+  box-shadow:
+    inset 0 1px 0 var(--cap-edge-hi),
+    inset 0 -2px 0 var(--cap-edge-lo),
+    0 2px 0 var(--chassis-deep);
+  transition: transform .06s linear, box-shadow .06s linear, background .12s linear;
+}
+
+.key:hover { background: var(--cap-edge-hi); }
+
+/* La course de touche est réelle : l'appui enfonce, l'assise disparaît. */
+.key:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 1px 0 var(--cap-edge-hi),
+    inset 0 -1px 0 var(--cap-edge-lo);
+}
+
+.key:focus-visible {
+  outline: 3px solid var(--live);
+  outline-offset: 2px;
+}
+
+.key:disabled {
+  opacity: .5;
+  cursor: default;
+  transform: none;
+}
+
+.key-block { display: flex; width: 100%; }
+
+/* L'orange ne sert qu'à commettre. S'il apparaît deux fois sur un écran, l'un
+   des deux est une erreur. */
+.key-action {
+  background: var(--action);
+  color: var(--action-ink);
+  box-shadow:
+    inset 0 1px 0 #FF8A45,
+    inset 0 -2px 0 var(--action-deep),
+    0 2px 0 var(--chassis-deep);
+}
+
+.key-action:hover { background: #FF6E1C; }
+
+.key-action:active {
+  box-shadow: inset 0 1px 0 #FF8A45, inset 0 -1px 0 var(--action-deep);
+}
+
+.key-danger {
+  background: var(--danger);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 #D4584B,
+    inset 0 -2px 0 #8E2A1F,
+    0 2px 0 var(--chassis-deep);
+}
+
+/* Touches montées sur le châssis : pas de capuchon clair, une gravure. */
+.key-lock, .key-close {
+  background: var(--chassis-edge);
+  color: var(--ink-on-chassis);
+  box-shadow:
+    inset 0 1px 0 #474D55,
+    inset 0 -2px 0 var(--chassis-deep),
+    0 1px 0 #000;
+}
+
+.key-lock:hover, .key-close:hover { background: #414850; }
+
+/* ---------------------------------------------------------------------------
+   Écran de démarrage : la face avant
+   --------------------------------------------------------------------------- */
+
+.screen-lock {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100dvh;
   padding: var(--gap);
+  padding-bottom: max(var(--gap), env(safe-area-inset-bottom));
 }
 
-.lock-card {
+.unit {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 380px;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  max-width: 420px;
+  padding: calc(var(--u) * 6);
+  background: var(--chassis);
+  border-radius: calc(var(--radius) * 2);
+  /* Le châssis a une arête, pas une ombre. */
+  box-shadow:
+    inset 0 1px 0 var(--chassis-edge),
+    inset 0 -2px 0 #0C0E10,
+    0 4px 0 #000;
+}
+
+.unit-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gap);
+  padding-bottom: calc(var(--u) * 4);
+  margin-bottom: calc(var(--u) * 5);
+  border-bottom: 2px solid var(--chassis-line);
+}
+
+.unit-name {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-on-chassis);
+}
+
+.unit-ref {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-on-chassis-dim);
+}
+
+/* Écran encastré : verre sombre en creux, texte ambre. C'est LE dispositif
+   d'état de cet appareil.
+   Volontairement pas une bordure colorée à gauche : ce motif n'appartient à
+   aucun instrument, il appartient au vocabulaire générique des interfaces —
+   et le détecteur le relève à juste titre. Ici l'état se lit parce qu'il est
+   creusé et rétroéclairé, comme sur la machine. */
+.readout {
+  margin: 0 0 var(--gap);
+  padding: calc(var(--u) * 3) calc(var(--u) * 4);
+  background: #0E1113;
   border-radius: var(--radius);
-  padding: 28px 24px;
+  color: var(--live);
+  font-size: 13px;
+  line-height: 1.55;
+  box-shadow: inset 0 2px 0 #000, inset 0 -1px 0 var(--chassis-edge);
 }
 
-.lock-title {
-  margin: 0 0 4px;
-  font-size: 24px;
-  letter-spacing: -0.01em;
+.plate {
+  margin: 0 0 calc(var(--u) * 3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-on-chassis-dim);
 }
 
-.lock-sub {
-  margin: 0 0 20px;
-  color: var(--text-dim);
-  font-size: 14px;
+.sep {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  margin: var(--gap) 0;
+  color: var(--ink-on-chassis-dim);
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
 }
 
-/* --- Champs --- */
+.sep::before, .sep::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: var(--chassis-line);
+}
 
-.field { display: block; margin-bottom: 14px; }
+.account {
+  order: 0;
+  margin-top: calc(var(--u) * 6);
+  padding-top: calc(var(--u) * 5);
+  border-top: 2px solid var(--chassis-line);
+}
+
+/* Ordre selon la situation. Sur un appareil neuf et non connecté, se connecter
+   est la seule action sensée : créer un second coffre est presque toujours une
+   erreur, et l'ordre inverse l'a effectivement provoquée deux fois. */
+.lock-card-accueil .unit-head { order: -3; }
+.lock-card-accueil .account {
+  order: -2;
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: calc(var(--u) * 5);
+  border-top: 0;
+  border-bottom: 2px solid var(--chassis-line);
+}
+.lock-card-accueil .account .plate { font-size: 13px; color: var(--ink-on-chassis); }
+
+.diag-access {
+  margin: calc(var(--u) * 5) 0 0;
+  text-align: center;
+  font-size: 12px;
+}
+
+.diag-access a, .note a {
+  color: var(--live);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------------------------------------------------------------------------
+   Champs
+   --------------------------------------------------------------------------- */
+
+.field { display: block; margin-bottom: var(--gap); }
 
 .field-label {
   display: block;
-  margin-bottom: 6px;
-  font-size: 13px;
-  color: var(--text-dim);
+  margin-bottom: calc(var(--u) * 2);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-on-chassis-dim);
 }
 
-input[type="password"],
-input[type="text"],
-input[type="url"],
-input[type="search"] {
+/* Les champs sont des fenêtres creusées dans le châssis. */
+input[type="text"], input[type="password"], input[type="email"],
+input[type="search"], textarea, .select {
   width: 100%;
-  padding: 11px 12px;
-  background: var(--surface-2);
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  font: inherit;
+  min-height: var(--key-h);
+  padding: calc(var(--u) * 3);
+  background: var(--cap);
+  color: var(--ink);
+  border: 0;
+  border-radius: var(--radius);
+  font: 400 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-shadow: inset 0 2px 0 var(--cap-edge-lo), inset 0 -1px 0 var(--cap-edge-hi);
 }
 
-input:focus-visible,
-button:focus-visible {
-  outline: 2px solid var(--accent);
+input[type="password"] { letter-spacing: .1em; }
+
+textarea { resize: vertical; }
+
+input:focus-visible, textarea:focus-visible, .select:focus-visible {
+  outline: 3px solid var(--live);
   outline-offset: 2px;
 }
 
-/* --- Boutons --- */
-
-.btn {
-  padding: 10px 16px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  font: inherit;
-  font-weight: 500;
-  cursor: pointer;
+.field-row {
+  display: flex;
+  gap: calc(var(--u) * 2);
+  align-items: stretch;
 }
 
-.btn-primary {
-  width: 100%;
-  background: var(--accent);
-  color: var(--accent-ink);
+.field-row input { flex: 1 1 auto; min-width: 0; }
+.field-row .key { flex: 0 0 auto; }
+
+.gen-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--u) * 2);
+  margin-bottom: var(--gap);
 }
 
-.btn-ghost {
-  width: auto;
-  background: transparent;
-  border-color: var(--line);
-  color: var(--text-dim);
+.gen-strength {
+  font-size: 12px;
+  letter-spacing: .06em;
+  color: var(--live);
 }
 
-.btn-ghost:hover { color: var(--text); }
+.gen-master { margin-bottom: var(--gap); }
 
-.btn:disabled { opacity: 0.5; cursor: default; }
+.gen-out {
+  display: block;
+  margin-top: calc(var(--u) * 2);
+  padding: calc(var(--u) * 3) calc(var(--u) * 4);
+  background: #0E1113;
+  border-radius: var(--radius);
+  color: var(--live);
+  font-size: 15px;
+  letter-spacing: .04em;
+  word-break: break-word;
+  box-shadow: inset 0 2px 0 #000, inset 0 -1px 0 var(--chassis-edge);
+}
 
-/* --- Messages --- */
+/* ---------------------------------------------------------------------------
+   Notes et états
+   --------------------------------------------------------------------------- */
 
-.error, .warn, .busy, .notice, .empty {
+.note {
+  margin: 0 0 var(--gap);
   font-size: 13px;
-  margin: 12px 0 0;
+  line-height: 1.55;
+  color: var(--ink-on-chassis-dim);
 }
 
-.error { color: var(--danger); }
-.warn { color: var(--text-dim); }
-.busy { color: var(--text-dim); }
-.empty { color: var(--text-dim); padding: 0 var(--gap); }
+.note-warn { color: var(--live); }
 
-/* --- Coffre --- */
+.note-alert {
+  padding: calc(var(--u) * 3);
+  background: var(--danger);
+  border-radius: var(--radius);
+  color: #fff;
+}
+
+.note-live {
+  padding: calc(var(--u) * 3) calc(var(--u) * 4);
+  background: #0E1113;
+  border-radius: var(--radius);
+  color: var(--live);
+  box-shadow: inset 0 2px 0 #000, inset 0 -1px 0 var(--chassis-edge);
+}
+
+.empty {
+  margin: var(--gap) 0;
+  padding: calc(var(--u) * 4);
+  color: var(--ink-on-chassis-dim);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------------------
+   Coffre ouvert
+   --------------------------------------------------------------------------- */
+
+.screen-vault {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--chassis);
+}
 
 .topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px var(--gap);
-  border-bottom: 1px solid var(--line);
-  position: sticky;
-  top: 0;
-  background: var(--bg);
-  z-index: 5;
+  gap: calc(var(--u) * 3);
+  padding: calc(var(--u) * 3);
+  padding-top: max(calc(var(--u) * 3), env(safe-area-inset-top));
+  background: var(--chassis-deep);
+  border-bottom: 2px solid var(--chassis-line);
 }
 
-/* min-width:0 est indispensable : sans lui un enfant flex refuse de passer
-   sous sa largeur de contenu et fait deborder toute la barre. */
-.topbar-title {
+/* L'écran d'état : une seule valeur à la fois, comme l'afficheur de
+   l'appareil. Le compte à rebours ne s'affiche que dans la dernière minute. */
+.screenlet {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--u) * 2);
+  min-width: 0;
   margin: 0;
-  font-size: 18px;
-  flex: 1;
+  padding: calc(var(--u) * 2) calc(var(--u) * 3);
+  background: #0E1113;
+  border-radius: var(--radius);
+  box-shadow: inset 0 2px 0 #000;
+}
+
+.screenlet-label {
+  flex: 0 0 auto;
+  font-size: 9px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-on-chassis-dim);
+}
+
+.screenlet-value {
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.topbar .btn { flex: 0 0 auto; white-space: nowrap; }
-
-/* Ecrans tres etroits : on resserre plutot que de laisser deborder. */
-@media (max-width: 380px) {
-  .topbar { gap: 8px; padding: 12px 10px; }
-  .topbar .btn { padding: 8px 10px; font-size: 14px; }
-  .topbar-title { font-size: 16px; }
-}
-
-.btn-block { margin-top: 6px; }
-
-.clip-status {
-  margin: 0 var(--gap) 10px;
-  padding: 8px 10px;
+  color: var(--live);
   font-size: 13px;
-  color: var(--text-dim);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  letter-spacing: .04em;
 }
 
-.lock-countdown {
+.screenlet-alt {
   flex: 0 0 auto;
-  font-size: 12px;
-  color: var(--danger);
-  white-space: nowrap;
+  color: var(--action);
+  font-size: 11px;
+  letter-spacing: .06em;
 }
 
-@media (max-width: 380px) {
-  .clip-status {
-  margin: 0 var(--gap) 10px;
-  padding: 8px 10px;
-  font-size: 13px;
-  color: var(--text-dim);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
+.sync-warn { color: var(--action); }
 
-.lock-countdown { font-size: 11px; }
-}
+.layout { flex: 1 1 auto; min-height: 0; }
 
-.layout { display: block; }
+/* Une vue à la fois sur téléphone : la barre de modes en bas commande. */
+.view { display: none; padding: var(--gap); }
+.view.is-current { display: block; }
 
-/* --- Panneau des repertoires --- */
-
-.group-panel {
-  display: none;
-  border-bottom: 1px solid var(--line);
-  padding: 8px var(--gap) 12px;
-}
-
-.group-panel-open { display: block; }
-
-.group-list { list-style: none; margin: 0 0 8px; padding: 0; }
-
-.group-item {
+.toolbar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  padding: 9px 12px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  color: var(--text-dim);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+  gap: calc(var(--u) * 2);
+  margin-bottom: var(--gap);
 }
 
-.group-item:hover { color: var(--text); background: var(--surface); }
-
-.group-item-active {
-  color: var(--text);
-  background: var(--surface);
-  border-color: var(--line);
-  font-weight: 500;
-}
-
-.group-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.group-count {
-  flex: 0 0 auto;
-  font-size: 12px;
-  color: var(--text-dim);
-  background: var(--surface-2);
-  border-radius: 999px;
-  padding: 1px 8px;
-}
-
-.btn-block { width: 100%; }
-
-/* --- Liste --- */
-
-.toolbar { display: flex; gap: 8px; padding: var(--gap); }
-.toolbar .search { flex: 1; }
-.toolbar .btn-primary { width: auto; flex: 0 0 auto; }
+.toolbar .search { flex: 1 1 auto; min-width: 0; }
+.toolbar .key { flex: 0 0 auto; }
 
 .scope-label {
-  margin: 0 var(--gap) 8px;
-  font-size: 12px;
-  color: var(--text-dim);
+  margin: 0 0 calc(var(--u) * 3);
+  font-size: 10px;
+  letter-spacing: .14em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: var(--ink-on-chassis-dim);
 }
 
-.entry-list { list-style: none; margin: 0; padding: 0 var(--gap) var(--gap); }
+/* --- Entrées : la rangée de touches ---------------------------------------
+   Chaque entrée est un capuchon pleine largeur. C'est la surface claire qui
+   porte le contenu, et la seule zone que l'œil doit atteindre en plein soleil. */
+
+.entry-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: calc(var(--u) * 2);
+}
 
 .entry {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  align-items: stretch;
+  gap: 2px;
+  /* Sans ceci, l'élément de grille garde `min-width: auto`, refuse de
+     rétrécir sous la largeur de son texte, et pousse la touche COPIER hors de
+     l'écran. Le contenu déborde en silence : rien ne le signale. */
+  min-width: 0;
 }
 
 .entry-main {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  flex: 1;
-  background: none;
+  justify-content: center;
+  gap: 2px;
+  min-height: calc(var(--key-h) + var(--u) * 3);
+  padding: calc(var(--u) * 2) calc(var(--u) * 4);
   border: 0;
-  padding: 0;
-  color: inherit;
-  font: inherit;
+  border-radius: var(--radius) 0 0 var(--radius);
+  background: var(--cap);
+  color: var(--ink);
   text-align: left;
   cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 var(--cap-edge-hi),
+    inset 0 -2px 0 var(--cap-edge-lo),
+    0 2px 0 var(--chassis-deep);
+  transition: transform .06s linear, box-shadow .06s linear, background .12s linear;
 }
 
+.entry-main:hover { background: var(--cap-edge-hi); }
+
+.entry-main:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 1px 0 var(--cap-edge-hi), inset 0 -1px 0 var(--cap-edge-lo);
+}
+
+.entry-main:focus-visible { outline: 3px solid var(--live); outline-offset: 2px; }
+
 .entry-title {
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .02em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .entry-sub {
-  font-size: 13px;
-  color: var(--text-dim);
+  font-size: 11px;
+  letter-spacing: .04em;
+  color: var(--ink-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* --- Detail --- */
+/* La touche qui commet, à droite de chaque entrée, sous le pouce. */
+.entry .key-copy {
+  flex: 0 0 auto;
+  min-width: 84px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* --- Répertoires ---------------------------------------------------------- */
+
+.group-list {
+  list-style: none;
+  margin: 0 0 var(--gap);
+  padding: 0;
+  display: grid;
+  gap: calc(var(--u) * 2);
+}
+
+.group-item { display: block; }
+
+.group-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  width: 100%;
+  min-height: var(--key-h);
+  padding: 0 calc(var(--u) * 4);
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--cap-2);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-align: left;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 var(--cap-edge-hi),
+    inset 0 -2px 0 var(--cap-edge-lo),
+    0 2px 0 var(--chassis-deep);
+}
+
+.group-btn:hover { background: var(--cap); }
+.group-btn:focus-visible { outline: 3px solid var(--live); outline-offset: 2px; }
+
+/* Le répertoire actif s'allume comme une touche de mode enfoncée : la touche
+   s'enfonce dans le châssis et sa légende passe à l'ambre.
+   Volontairement PAS en orange : l'orange ne dit qu'une chose, « ceci commet ».
+   Un répertoire sélectionné est un état, et l'état parle ambre. Sans cette
+   séparation, trois oranges cohabitaient à l'écran sur grand format et le
+   geste à commettre cessait d'être trouvable d'un coup d'œil. */
+.group-btn[aria-current="true"] {
+  background: var(--chassis-deep);
+  color: var(--live);
+  box-shadow:
+    inset 3px 0 0 var(--live),
+    inset 0 2px 0 #000,
+    inset 0 -1px 0 var(--chassis-edge);
+}
+
+.group-btn[aria-current="true"]:hover { background: #0E1113; }
+
+/* --- Réglages ------------------------------------------------------------- */
+
+.rack {
+  margin-bottom: calc(var(--u) * 6);
+  padding-bottom: calc(var(--u) * 5);
+  border-bottom: 2px solid var(--chassis-line);
+}
+
+.rack:last-child { border-bottom: 0; }
+
+.rack-title {
+  margin: 0 0 calc(var(--u) * 3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-on-chassis);
+}
+
+/* --- Conflit -------------------------------------------------------------- */
+
+.conflict {
+  margin-bottom: var(--gap);
+  background: var(--chassis-deep);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 2px var(--danger);
+}
+
+/* Plaque sérigraphiée pleine largeur : sur une machine, un avertissement est
+   une plaque vissée, pas un trait de couleur. */
+.conflict-title {
+  margin: 0;
+  padding: calc(var(--u) * 3) var(--gap);
+  background: var(--danger);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.conflict-text:first-of-type { margin-top: var(--gap); }
+.conflict-text, .conflict-actions { margin-left: var(--gap); margin-right: var(--gap); }
+.conflict-actions { padding-bottom: var(--gap); }
+
+.conflict-text {
+  margin: 0 0 calc(var(--u) * 3);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-on-chassis);
+}
+
+.conflict-actions { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); }
+
+/* --- Barre de modes ------------------------------------------------------- */
+
+.tabbar {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: calc(var(--u) * 2);
+  padding-bottom: max(calc(var(--u) * 2), env(safe-area-inset-bottom));
+  background: var(--chassis-deep);
+  border-top: 2px solid var(--chassis-line);
+}
+
+.tab {
+  min-height: 48px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--chassis-edge);
+  color: var(--ink-on-chassis-dim);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 #474D55, inset 0 -2px 0 var(--chassis-deep);
+}
+
+/* Le mode courant s'allume en ambre : l'état se lit, il ne se devine pas. */
+.tab.is-current {
+  background: var(--cap);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 var(--cap-edge-hi), inset 0 -2px 0 var(--cap-edge-lo);
+}
+
+.tab:focus-visible { outline: 3px solid var(--live); outline-offset: -3px; }
+
+/* ---------------------------------------------------------------------------
+   Détail d'une entrée
+   --------------------------------------------------------------------------- */
 
 .detail {
   position: fixed;
   inset: 0;
-  z-index: 20;
-  background: var(--bg);
-  overflow-y: auto;
+  z-index: 50;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background: rgba(10, 12, 14, .82);
 }
 
 .detail[hidden] { display: none; }
 
 .detail-inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
   max-width: 560px;
-  margin: 0 auto;
-  padding: var(--gap);
+  background: var(--chassis);
+  border-radius: 0;
 }
 
 .detail-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: var(--gap);
+  padding: calc(var(--u) * 3) var(--gap);
+  padding-top: max(calc(var(--u) * 3), env(safe-area-inset-top));
+  background: var(--chassis-deep);
+  border-bottom: 2px solid var(--chassis-line);
 }
 
-.detail-title { margin: 0; font-size: 18px; }
-
-.field-row { display: flex; gap: 6px; align-items: stretch; }
-.field-row input { flex: 1; min-width: 0; }
-
-.select, textarea {
-  width: 100%;
-  padding: 11px 12px;
-  background: var(--surface-2);
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  font: inherit;
+.detail-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-on-chassis);
 }
 
-textarea { resize: vertical; }
-
-.gen-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: -4px 0 16px;
-}
-
-.gen-strength { font-size: 12px; color: var(--text-dim); }
-
-.gen-master { margin-bottom: 16px; }
-
-.gen-out {
-  display: block;
-  margin-top: 10px;
-  padding: 10px 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
-
-.custom-fields {
-  margin: 4px 0 18px;
-  padding: 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-}
-
-.custom-title { margin: 0 0 8px; font-size: 13px; color: var(--text-dim); }
-.custom-field { margin: 0 0 4px; font-size: 14px; overflow-wrap: anywhere; }
-.custom-field strong { font-weight: 500; }
-
-.detail-actions { display: flex; align-items: center; gap: 8px; margin-top: 20px; }
-.detail-actions .spacer { flex: 1; }
-.detail-actions .btn-primary { width: auto; }
-
-.btn-danger {
-  background: transparent;
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-/* --- Grand ecran : les repertoires deviennent une colonne permanente --- */
-
-@media (min-width: 820px) {
-  .btn-groups, #btn-groups { display: none; }
-
-  .layout {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    align-items: start;
-  }
-
-  .group-panel {
-    display: block;
-    border-bottom: 0;
-    border-right: 1px solid var(--line);
-    min-height: calc(100dvh - 57px);
-    padding-top: var(--gap);
-  }
-
-  .detail-inner { padding: 28px var(--gap); }
-}
-
-/* --- Page de diagnostic (diagnostic.html) --- */
-
-.diag {
-  max-width: 640px;
-  margin: 0 auto;
+.detail-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
   padding: var(--gap);
 }
 
-.diag-title { font-size: 20px; margin: 8px 0 12px; }
-
-.diag-intro, .diag-note {
-  color: var(--text-dim);
-  font-size: 14px;
-  margin: 0 0 16px;
+.detail-actions {
+  display: grid;
+  gap: calc(var(--u) * 2);
+  padding: var(--gap);
+  padding-bottom: max(var(--gap), env(safe-area-inset-bottom));
+  background: var(--chassis-deep);
+  border-top: 2px solid var(--chassis-line);
 }
 
-.diag-note { margin-top: 10px; }
+.custom-fields {
+  margin-top: var(--gap);
+  padding: calc(var(--u) * 3);
+  background: var(--chassis-deep);
+  border-radius: var(--radius);
+}
+
+.custom-title {
+  margin: 0 0 calc(var(--u) * 2);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-on-chassis-dim);
+}
+
+.custom-field {
+  margin: 0 0 calc(var(--u) * 2);
+  font-size: 13px;
+  color: var(--ink-on-chassis);
+  word-break: break-word;
+}
+
+/* ---------------------------------------------------------------------------
+   Grand écran : le plan de travail s'ouvre, les trois vues cohabitent
+   --------------------------------------------------------------------------- */
+
+@media (min-width: 900px) {
+  .layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr) 320px;
+    gap: 2px;
+    background: var(--chassis-line);
+  }
+
+  /* Plus de commutation : tout est visible, la barre de modes disparaît. */
+  .view { display: block; background: var(--chassis); }
+  .group-panel { order: -1; }
+  .tabbar { display: none; }
+
+  .entry-list { gap: calc(var(--u) * 2); }
+}
+
+/* ---------------------------------------------------------------------------
+   Préférences
+   --------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .key, .entry-main { transition: none; }
+  .key:active, .entry-main:active { transform: none; }
+}
+
+/* Un contraste renforcé demandé par le système durcit les arêtes plutôt que
+   d'ajouter de la couleur. */
+@media (prefers-contrast: more) {
+  :root {
+    --ink-2: #33373B;
+    --ink-on-chassis-dim: #C9CDD2;
+    --cap: #F5F1E6;
+  }
+}
+
+/* Rappel d'export en retard : l'arête passe à l'orange d'action, sans crier. */
+/* État réclamant une action, sans être une erreur : l'écran s'entoure d'un
+   cerne rouge, comme un annonciateur. Le texte reste ambre — l'orange ne dit
+   jamais que « ceci commet », et un rappel ne commet rien. */
+.readout-alert { box-shadow: inset 0 0 0 2px var(--danger), inset 0 2px 0 #000; }
+
+/* ---------------------------------------------------------------------------
+   Page de diagnostic
+   ---------------------------------------------------------------------------
+   Même appareil, mode maintenance : le capot est ouvert. Les résultats sont
+   des lignes de journal gravées sur le châssis, pas des cartes. */
+
+.diag {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--gap);
+  padding-bottom: max(var(--gap), env(safe-area-inset-bottom));
+}
+
+.diag-title {
+  margin: calc(var(--u) * 8) 0 calc(var(--u) * 3);
+  font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono",
+    "Roboto Mono", Menlo, Consolas, monospace;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-on-chassis);
+}
+
+.diag-title:first-child { margin-top: calc(var(--u) * 4); }
+
+.diag-intro, .diag-note {
+  margin: 0 0 var(--gap);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-on-chassis-dim);
+}
 
 .diag-block {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  margin-bottom: var(--gap);
+  padding: var(--gap);
+  background: #0E1113;
   border-radius: var(--radius);
-  padding: 12px 14px;
-  margin-bottom: 16px;
+  box-shadow: inset 0 2px 0 #000, inset 0 -1px 0 var(--chassis-edge);
 }
 
 .diag-ctx {
-  margin: 0 0 6px;
+  margin: 0 0 calc(var(--u) * 2);
   font-size: 13px;
-  color: var(--text-dim);
-  overflow-wrap: anywhere;
+  line-height: 1.5;
+  color: var(--ink-on-chassis-dim);
+  word-break: break-word;
 }
 
-.diag-ctx strong { color: var(--text); font-weight: 500; }
+.diag-ctx strong { color: var(--ink-on-chassis); }
 
-.diag .btn-primary { width: auto; }
+.diag-results { list-style: none; margin: var(--gap) 0; padding: 0; }
 
-.diag-results {
-  list-style: none;
-  margin: 20px 0 0;
-  padding: 0;
-}
-
+/* Annonciateur : un voyant cerclé sur verre sombre. Le cerne complet est une
+   pièce d'instrument ; le liseré latéral, lui, n'est qu'un tic d'interface. */
 .diag-line {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
-  margin-bottom: 6px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-left-width: 3px;
-  border-radius: 8px;
+  display: block;
+  margin-bottom: calc(var(--u) * 2);
+  padding: calc(var(--u) * 3) calc(var(--u) * 4);
+  background: #0E1113;
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px var(--chassis-line);
 }
 
-.diag-ok { border-left-color: #4ec98a; }
-.diag-ko { border-left-color: var(--danger); }
-.diag-info { border-left-color: var(--text-dim); }
+.diag-ok { box-shadow: inset 0 0 0 1px #4E9A5B; }
+.diag-ko { box-shadow: inset 0 0 0 2px var(--danger); }
+.diag-info { box-shadow: inset 0 0 0 1px var(--live); }
 
-.diag-line-title { font-size: 14px; font-weight: 500; }
+.diag-ok .diag-line-title { color: #7CC088; }
+.diag-ko .diag-line-title { color: #E8897C; }
+.diag-info .diag-line-title { color: var(--live); }
+
+.diag-line-title {
+  display: block;
+  font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono",
+    "Roboto Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--ink-on-chassis);
+}
 
 .diag-line-detail {
+  display: block;
+  margin-top: calc(var(--u) * 1);
   font-size: 13px;
-  color: var(--text-dim);
-  overflow-wrap: anywhere;
+  line-height: 1.5;
+  color: var(--ink-on-chassis-dim);
+  word-break: break-word;
 }
 
 .diag-verdict {
-  margin-top: 18px;
-  padding: 14px;
+  margin: var(--gap) 0;
+  padding: var(--gap);
   border-radius: var(--radius);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
-.diag-verdict-ok { background: rgba(78, 201, 138, 0.12); border: 1px solid #4ec98a; }
-.diag-verdict-ko { background: rgba(255, 128, 128, 0.10); border: 1px solid var(--danger); }
+.diag-verdict-ok { background: #1F3A28; color: #CFE8D4; box-shadow: inset 0 0 0 2px #4E9A5B; }
+.diag-verdict-ko { background: #3A1F1B; color: #F2D4CF; box-shadow: inset 0 0 0 2px var(--danger); }
 
-/* --- Compte de synchronisation (écran de verrouillage) --- */
-
-.account {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-}
-
-.account-title {
-  margin: 0 0 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-}
-
-.account-state {
-  margin: 0 0 10px;
-  font-size: 13px;
-  color: var(--text-dim);
-  overflow-wrap: anywhere;
-}
-
-.signin { margin-bottom: 10px; }
-
-.hint {
-  margin: 4px 0 10px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-dim);
-}
-
-/* --- Indicateur de synchronisation (en-tête du coffre) --- */
-
-.sync-status {
-  font-size: 12px;
-  color: var(--text-dim);
-  margin-left: auto;
-  padding-right: 10px;
-  overflow-wrap: anywhere;
-}
-
-.sync-ok { color: var(--text-dim); }
-.sync-busy { color: var(--accent); }
-.sync-warn { color: var(--danger); }
-
-@media (max-width: 480px) {
-  .sync-status { font-size: 11px; }
-}
-
-/* Accès à la page de diagnostic. Discret sur PC, mais indispensable sur
-   téléphone : y accéder en tapant l'adresse à la main n'est pas praticable. */
-.diag-access {
-  margin: 14px 0 0;
-  text-align: center;
-  font-size: 12px;
-}
-
-.diag-access a {
-  color: var(--text-dim);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.diag-access a:hover,
-.diag-access a:focus-visible {
-  color: var(--accent);
-}
-
-/* Rappel d'export local. Discret quand tout va bien, visible quand la dernière
-   copie sur disque date — c'est la seule sauvegarde qui ne dépende d'aucun
-   compte tiers. */
-.export-reminder {
-  margin: 0 0 8px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-dim);
-}
-
-.export-reminder-warn {
-  color: var(--danger);
-}
-
-/* Conflit entre deux coffres sans ancêtre commun. Volontairement voyant : les
-   deux issues détruisent quelque chose, l'utilisateur doit s'arrêter et lire. */
-.conflict {
+/* Classes héritées, encore posées par js/diagnostic.js. */
+.error {
   margin: 0 0 var(--gap);
-  padding: 14px 16px;
-  border: 1px solid var(--danger);
+  padding: calc(var(--u) * 3);
+  background: var(--danger);
   border-radius: var(--radius);
-  background: var(--surface-2);
-}
-
-.conflict-title {
-  margin: 0 0 8px;
-  font-size: 15px;
-  color: var(--danger);
-}
-
-.conflict-text {
-  margin: 0 0 10px;
+  color: #fff;
   font-size: 13px;
   line-height: 1.55;
-  color: var(--text);
 }
 
-.conflict-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-/* --- Ouverture biométrique --- */
-
-.bio {
-  margin: var(--gap) 0;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-}
-
-.bio-title {
-  margin: 0 0 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-}
-
-.bio-state {
-  margin: 0 0 10px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-dim);
-}
-
-/* Séparateur entre le raccourci biométrique et la saisie de la phrase : il doit
-   rester évident que le second chemin existe toujours. */
-.bio-sep {
-  margin: 12px 0;
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-dim);
-}
-
-/* --- Ordre de l'écran de verrouillage selon la situation ---
-   Par défaut, la phrase maîtresse d'abord : c'est le geste quotidien sur un
-   appareil déjà équipé.
-   Sur un appareil neuf et non connecté, l'ordre s'inverse. Se connecter y est
-   la seule action sensée, et créer un second coffre est presque toujours une
-   erreur — deux coffres sans ancêtre commun ne fusionnent pas. Laisser la
-   création en premier a effectivement produit cette erreur deux fois. */
-/* Le titre reste en tête : seul le bloc Synchronisation remonte. */
-.lock-card-accueil .lock-title {
-  order: -2;
-}
-
-.lock-card-accueil .account {
-  order: -1;
-  margin-top: 0;
-  margin-bottom: 20px;
-  padding-top: 0;
-  padding-bottom: 16px;
-  border-top: none;
-  border-bottom: 1px solid var(--line);
-}
-
-.lock-card-accueil .account-title {
-  font-size: 15px;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--text);
-}
+.warn { color: var(--live); }
+.busy { color: var(--ink-on-chassis-dim); }

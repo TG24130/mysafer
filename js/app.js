@@ -190,10 +190,11 @@ let syncing = false;
 let syncQueued = false;
 
 function setSyncStatus(msg, kind = '') {
+  // L'afficheur ne s'éteint jamais : un appareil sans état affiché ressemble à
+  // un appareil en panne. Sans message, il retombe sur « Prêt ».
   const el = $('sync-status');
-  el.textContent = msg || '';
-  el.className = 'sync-status' + (kind ? ' sync-' + kind : '');
-  el.hidden = !msg;
+  el.textContent = msg || 'Prêt';
+  el.className = 'screenlet-value' + (kind === 'warn' ? ' sync-warn' : '');
 }
 
 /**
@@ -303,8 +304,10 @@ function groupItem({ uuid, name, depth, entryCount }) {
   const li = document.createElement('li');
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.className = 'group-item' + (uuid === selectedGroupUuid ? ' group-item-active' : '');
-  btn.style.paddingLeft = (12 + depth * 14) + 'px';
+  btn.className = 'group-btn';
+  // Indentation par unité de touche, posée via la CSSOM : la CSP interdit
+  // les attributs style dans le HTML, pas la manipulation depuis le script.
+  btn.style.paddingLeft = (16 + depth * 16) + 'px';
   if (uuid === selectedGroupUuid) btn.setAttribute('aria-current', 'true');
 
   const label = document.createElement('span');
@@ -327,11 +330,30 @@ function groupItem({ uuid, name, depth, entryCount }) {
   return li;
 }
 
+/**
+ * Bascule la vue courante.
+ *
+ * Sur téléphone, une seule vue est montée à la fois et la barre de modes du bas
+ * commande — c'est la rangée de touches de mode de l'appareil, placée sous le
+ * pouce parce que l'usage de référence est le téléphone tenu d'une main. Au-delà
+ * de 900 px la feuille de style montre les trois vues côte à côte et masque la
+ * barre : la fonction devient alors sans effet visible, ce qui est voulu.
+ */
+function showView(nom) {
+  for (const vue of document.querySelectorAll('.view')) {
+    vue.classList.toggle('is-current', vue.dataset.view === nom);
+  }
+  for (const onglet of document.querySelectorAll('.tab')) {
+    const actif = onglet.dataset.target === nom;
+    onglet.classList.toggle('is-current', actif);
+    if (actif) onglet.setAttribute('aria-current', 'page');
+    else onglet.removeAttribute('aria-current');
+  }
+}
+
+/** Choisir un répertoire ramène à la liste : c'est ce qu'on venait y chercher. */
 function closeGroupPanel() {
-  // Sur téléphone le panneau est en superposition ; sur grand écran il est
-  // toujours visible et la classe n'a aucun effet.
-  $('group-panel').classList.remove('group-panel-open');
-  $('btn-groups').setAttribute('aria-expanded', 'false');
+  showView('entries');
 }
 
 // ---------------------------------------------------------------------------
@@ -383,7 +405,7 @@ function entryItem(entry, group) {
 
   const copy = document.createElement('button');
   copy.type = 'button';
-  copy.className = 'btn btn-ghost';
+  copy.className = 'key key-action key-copy';
   copy.textContent = 'Copier';
   copy.addEventListener('click', () => copyToClipboard(fieldText(entry, 'Password'), copy));
 
@@ -624,11 +646,9 @@ $('form-unlock').addEventListener('submit', async (e) => {
 // Actions du coffre
 // ---------------------------------------------------------------------------
 
-$('btn-groups').addEventListener('click', () => {
-  const panel = $('group-panel');
-  const ouvert = panel.classList.toggle('group-panel-open');
-  $('btn-groups').setAttribute('aria-expanded', String(ouvert));
-});
+for (const onglet of document.querySelectorAll('.tab')) {
+  onglet.addEventListener('click', () => showView(onglet.dataset.target));
+}
 
 $('btn-add-group').addEventListener('click', async () => {
   const nom = prompt('Nom du nouveau répertoire ?');
@@ -686,7 +706,7 @@ async function majRappelExport() {
     el.textContent = jours === 0
       ? 'Copie sur disque exportée aujourd’hui.'
       : `Dernière copie sur disque il y a ${jours} jour${jours > 1 ? 's' : ''}.`;
-    el.className = 'export-reminder';
+    el.className = 'readout';
     el.hidden = false;
     return;
   }
@@ -694,7 +714,7 @@ async function majRappelExport() {
   el.textContent = jamais
     ? 'Aucune copie sur disque. Les sauvegardes en ligne dépendent toutes du même compte : exportez le fichier au moins une fois.'
     : 'Dernière copie sur disque il y a plus de 30 jours.';
-  el.className = 'export-reminder export-reminder-warn';
+  el.className = 'readout readout-alert';
   el.hidden = false;
 }
 
@@ -794,7 +814,10 @@ async function refreshLockScreen() {
   const accueil = !déverrouiller && !authState.currentUser;
   document.querySelector('.lock-card').classList.toggle('lock-card-accueil', accueil);
   $('create-hint').hidden = !accueil;
-  if (accueil && authState.resolved) $('form-signin').hidden = false;
+  if (accueil && authState.resolved) {
+    $('form-signin').hidden = false;
+    $('btn-signin-toggle').hidden = true;
+  }
 
   if (!$('screen-lock').hidden) {
     if (accueil) $('input-email').focus();
@@ -907,14 +930,17 @@ function refreshAccountUi() {
     ? `Connecté : ${user.email}`
     : (authState.resolved ? 'Non connecté. Le coffre fonctionne sans compte.' : 'Vérification du compte…');
 
-  $('btn-signin-toggle').hidden = connecté;
   $('btn-signout').hidden = !connecté;
   if (connecté) $('form-signin').hidden = true;
+  // Le bouton d'ouverture disparaît dès que le formulaire est là : deux
+  // « Se connecter » empilés ne servent à rien et brouillent le geste.
+  $('btn-signin-toggle').hidden = connecté || !$('form-signin').hidden;
 }
 
 $('btn-signin-toggle').addEventListener('click', () => {
-  $('form-signin').hidden = !$('form-signin').hidden;
-  if (!$('form-signin').hidden) $('input-email').focus();
+  $('form-signin').hidden = false;
+  $('btn-signin-toggle').hidden = true;
+  $('input-email').focus();
 });
 
 $('form-signin').addEventListener('submit', async (e) => {

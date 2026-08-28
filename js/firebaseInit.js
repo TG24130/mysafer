@@ -65,11 +65,17 @@ if (IS_TEST_ENV) {
   badge.setAttribute('role', 'status');
   badge.style.cssText = [
     'position:fixed', 'z-index:99999', 'left:0', 'right:0', 'bottom:0',
-    'background:#c2410c', 'color:#fff', 'text-align:center',
+    'background:#F0A500', 'color:#16191C', 'text-align:center',
     'font:600 12px/1.6 system-ui,sans-serif', 'letter-spacing:.04em',
     'padding:4px 8px', 'pointer-events:none',
   ].join(';');
-  const attach = () => document.body && document.body.appendChild(badge);
+  // Réserver la hauteur du bandeau : posé en `fixed`, il recouvrait la barre
+  // de modes du coffre, donc des commandes réelles.
+  const attach = () => {
+    if (!document.body) return;
+    document.body.appendChild(badge);
+    document.body.style.paddingBottom = badge.offsetHeight + 'px';
+  };
   if (document.body) attach();
   else document.addEventListener('DOMContentLoaded', attach, { once: true });
 }
