@@ -1,17 +1,35 @@
-Commande a coller dans Google Cloud Shell.
-Lien direct :  https://shell.cloud.google.com/?project=coffre-fort-test
+Commandes a coller dans Google Cloud Shell.
 
-A refaire depuis l'ajout du port 5175 (le serveur de developpement a change de
-port pour echapper a un cache HTTP empoisonne ; voir tools/serve.py).
+Une seule origine est autorisee par projet, et c'est voulu : le bucket de
+production n'accepte que le site deploye, celui de test n'accepte que le
+serveur local. Une session locale ne peut donc pas ecrire dans le vrai coffre,
+meme par erreur.
 
---- PROJET DE TEST (coffre-fort-test) ---
+================================================================
+PRODUCTION  (coffre-fort-ae72c)  --  origine https://tg24130.github.io
+================================================================
+
+Lien direct :
+https://shell.cloud.google.com/?project=coffre-fort-ae72c
+
+Coller le bloc ci-dessous en entier, puis Entree :
+
+cat > cors.json <<'FIN'
+[{"origin":["https://tg24130.github.io"],"method":["GET","PUT","POST","DELETE","HEAD"],"responseHeader":["Content-Type","Content-Length","Content-Range","Content-Encoding","Content-Disposition","Authorization","Range","x-goog-resumable","x-goog-meta-app","x-goog-meta-format","x-goog-meta-role"],"maxAgeSeconds":3600}]
+FIN
+gcloud storage buckets update gs://coffre-fort-ae72c.firebasestorage.app --cors-file=cors.json
+
+
+================================================================
+TEST  (coffre-fort-test)  --  deja fait le 28/08/2026
+================================================================
+
+A rejouer seulement si le port du serveur local change.
+
+Lien direct :
+https://shell.cloud.google.com/?project=coffre-fort-test
 
 cat > cors.json <<'FIN'
 [{"origin":["http://localhost:5174","http://127.0.0.1:5174","http://localhost:5175","http://127.0.0.1:5175"],"method":["GET","PUT","POST","DELETE","HEAD"],"responseHeader":["Content-Type","Content-Length","Content-Range","Content-Encoding","Content-Disposition","Authorization","Range","x-goog-resumable","x-goog-meta-app","x-goog-meta-format","x-goog-meta-role"],"maxAgeSeconds":3600}]
 FIN
 gcloud storage buckets update gs://coffre-fort-test.firebasestorage.app --cors-file=cors.json
-gcloud storage buckets describe gs://coffre-fort-test.firebasestorage.app --format="default(cors_config)"
-
---- PROJET DE PRODUCTION (coffre-fort-ae72c) ---
-A faire au moment du deploiement HTTPS, en remplacant les origines localhost
-par l'adresse GitHub Pages reelle.
