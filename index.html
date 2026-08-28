@@ -18,6 +18,14 @@
 <meta name="color-scheme" content="dark light">
 <title>MySafer</title>
 <link rel="manifest" href="./manifest.json">
+<!-- iOS ne lit pas les icônes du manifeste pour l'écran d'accueil : sans ce
+     lien, il fabrique une vignette de la page. Le nom affiché sous l'icône
+     vient de apple-mobile-web-app-title, pas du manifeste non plus. -->
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" href="./icons/icon-192.png" type="image/png">
+<meta name="apple-mobile-web-app-title" content="MySafer">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>

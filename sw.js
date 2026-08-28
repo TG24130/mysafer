@@ -10,7 +10,7 @@
 // l'ouverture du coffre (kdbxweb, Argon2) sont donc précachées ici et servies
 // depuis la même origine. Une dépendance CDN serait ignorée par le filtre
 // same-origin plus bas et casserait le mode hors ligne.
-const CACHE_NAME = 'coffre-cache-2026082819';
+const CACHE_NAME = 'coffre-cache-2026082820';
 
 const CORE_ASSETS = [
   './',
@@ -39,6 +39,9 @@ const CORE_ASSETS = [
   './js/vendor/firebase/firebase-app.js',
   './js/vendor/firebase/firebase-auth.js',
   './js/vendor/firebase/firebase-storage.js',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-maskable-512.png',
   './js/vendor/eff-wordlist.json',
   './js/vendor/kdbxweb.min.js',
   './js/vendor/argon2-bundled.min.js',

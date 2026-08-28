@@ -1,13 +1,13 @@
 {
-  "name": "Coffre",
-  "short_name": "Coffre",
+  "name": "MySafer",
+  "short_name": "MySafer",
   "description": "Coffre-fort de mots de passe personnel, format KDBX, fonctionnel hors ligne.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#11141b",
-  "theme_color": "#11141b",
+  "background_color": "#16191C",
+  "theme_color": "#22262B",
   "icons": [
     {
       "src": "./icons/icon-192.png",
