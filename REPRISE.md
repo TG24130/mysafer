@@ -443,9 +443,31 @@ définitivement inopérant.
 page. Elle devient inutilisée et se supprime dans les réglages du système. Le
 paquet emballé, lui, disparaît — c'est ce qui compte.
 
-**Vérifié** : interface, détection de l'authentificateur, masquage correct hors
-enrôlement, aucune erreur de console. **Reste à éprouver** : l'enrôlement et le
-déverrouillage réels, sur PC puis sur iPhone.
+**Éprouvé sur iPhone** (iOS 26.6) : enrôlement, puis déverrouillage par Face ID
+du coffre de production. Le PC n'est pas encore enrôlé — l'opération y est
+indépendante, à faire quand ce sera utile.
+
+**Choix du fournisseur de clé d'accès, à savoir avant d'enrôler.** Le navigateur
+propose de ranger la clé chez un gestionnaire tiers (Keeper, par exemple) plutôt
+que dans l'authentificateur natif. Prendre le natif : sur iPhone c'est
+« Mots de passe » (trousseau iCloud, qui pilote Face ID), sur Windows c'est
+Windows Hello. Le support de PRF par les gestionnaires tiers n'est pas garanti,
+et tout le mécanisme en dépend.
+
+Conséquence à assumer sur iPhone : les clés du trousseau iCloud **se
+synchronisent** vers les autres appareils Apple du même compte. Le coffre s'y
+ouvrira donc aussi par biométrie. C'est le fonctionnement d'Apple, sans option
+pour l'éviter ; la sécurité du coffre dépend alors aussi de celle du compte
+iCloud.
+
+**Recharger la page verrouille le coffre**, et c'est voulu : la clé ne vit qu'en
+mémoire. Sur téléphone, « tirer pour rafraîchir » suffit à déclencher ce
+verrouillage, ce qui rendait la ressaisie de six mots pénible sur un petit
+clavier — précisément l'arbitrage de la décision 4. La biométrie le supprime.
+Installer le site sur l'écran d'accueil (depuis Safari, `display: standalone`
+étant déjà dans le manifeste) supprimerait aussi le rechargement accidentel,
+mais impose de tout refaire dans ce navigateur : autre stockage, autre
+enrôlement.
 
 ### Écran de verrouillage : l'ordre dépend de la situation
 
@@ -518,7 +540,7 @@ dans le terrain de l'incident d'août.
 | 2 | Répertoires, détail d'entrée, générateur, recherche | fait |
 | 3 | Verrouillage 5 min, presse-papiers, Argon2 en worker | fait |
 | 4 | Synchronisation Firebase Storage + fusion | fait |
-| 5 | Ouverture biométrique (WebAuthn PRF) | écrite, à éprouver sur les appareils |
+| 5 | Ouverture biométrique (WebAuthn PRF) | fait — éprouvé sur iPhone |
 | 6 | Sauvegarde indépendante | fait |
 | 7 | **Passe de design** | **à faire — prochaine** |
 
