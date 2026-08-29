@@ -115,17 +115,45 @@ function lockVault(raison) {
   $('input-master').focus();
 }
 
+// ---------------------------------------------------------------------------
+// Jour affiché
+// ---------------------------------------------------------------------------
+
+// Repère de lecture, pas une horloge : la minute n'apprend rien à qui consulte
+// un mot de passe. Un rafraîchissement par minute suffit à passer minuit sans
+// que l'afficheur mente.
+let todayHandle = null;
+
+const jourFormat = new Intl.DateTimeFormat('fr-FR', {
+  weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+});
+
+function renderToday() {
+  $('today').textContent = jourFormat.format(new Date());
+}
+
+function startToday() {
+  renderToday();
+  if (todayHandle === null) todayHandle = setInterval(renderToday, 60000);
+}
+
+function stopToday() {
+  if (todayHandle !== null) { clearInterval(todayHandle); todayHandle = null; }
+}
+
 function armLock() {
   lockTimer.start();
   if (!detachActivity) detachActivity = attachActivityListeners(lockTimer);
   if (countdownHandle === null) countdownHandle = setInterval(renderCountdown, 1000);
   renderCountdown();
+  startToday();
 }
 
 function disarmLock() {
   lockTimer.stop();
   if (detachActivity) { detachActivity(); detachActivity = null; }
   if (countdownHandle !== null) { clearInterval(countdownHandle); countdownHandle = null; }
+  stopToday();
   $('lock-countdown').textContent = '';
   $('lock-countdown').classList.remove('is-urgent');
 }

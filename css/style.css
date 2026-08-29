@@ -246,13 +246,15 @@ body {
     0 2px 0 var(--chassis-deep);
 }
 
+/* Seule gravure de l'appareil qui garde sa casse : c'est un nom propre, pas
+   une légende. L'espacement se resserre en conséquence — celui des capitales
+   disloque un mot en casse mixte. */
 .unit-name {
   margin: 0;
   font-size: clamp(28px, 9vw, 38px);
   font-weight: 700;
   line-height: 1;
-  letter-spacing: .16em;
-  text-transform: uppercase;
+  letter-spacing: .06em;
   color: var(--ink);
 }
 
@@ -480,6 +482,9 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
 .screenlet {
   flex: 1 1 auto;
   display: flex;
+  /* Le jour passe à la ligne quand la largeur manque plutôt que de disparaître
+     ou de rogner l'état : sur téléphone, c'est le seul endroit où il se lit. */
+  flex-wrap: wrap;
   align-items: baseline;
   gap: calc(var(--u) * 2);
   min-width: 0;
@@ -520,6 +525,13 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
 }
 
 .screenlet-alt.is-urgent { color: #E8897C; }
+
+/* Poussé à droite de l'afficheur, et rejeté sous l'état dès que la ligne est
+   pleine — comme la seconde ligne d'un afficheur d'instrument. */
+.screenlet-date {
+  margin-left: auto;
+  text-transform: uppercase;
+}
 
 .sync-warn { color: #E8897C; }
 
