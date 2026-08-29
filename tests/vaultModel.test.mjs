@@ -112,13 +112,25 @@ test('le compte d\'entrées est celui du groupe seul', () => {
 console.log('\nListes d\'entrées');
 
 test('entriesOf descend dans les sous-groupes par défaut', () => {
-  const titres = entriesOf(perso).map(({ entry: e }) => fieldText(e, 'Title'));
+  const titres = entriesOf(db, perso).map(({ entry: e }) => fieldText(e, 'Title'));
   assert.deepEqual(titres.sort(), ['Amazon', 'Netflix']);
 });
 
 test('entriesOf peut rester au niveau du groupe', () => {
-  const titres = entriesOf(perso, false).map(({ entry: e }) => fieldText(e, 'Title'));
+  const titres = entriesOf(db, perso, false).map(({ entry: e }) => fieldText(e, 'Title'));
   assert.deepEqual(titres, ['Amazon']);
+});
+
+test('entriesOf ignore la corbeille en descendant', () => {
+  const titres = entriesOf(db, racine).map(({ entry: e }) => fieldText(e, 'Title'));
+  assert.ok(!titres.includes('Vieux compte'),
+    'entrée de corbeille comptée dans la racine : ' + titres.join(', '));
+  assert.deepEqual(titres.sort(), ['Amazon', 'Netflix', 'Zenith']);
+});
+
+test('entriesOf sans coffre connu descend partout, corbeille comprise', () => {
+  const titres = entriesOf(null, racine).map(({ entry: e }) => fieldText(e, 'Title'));
+  assert.ok(titres.includes('Vieux compte'));
 });
 
 test('allEntries ignore la corbeille', () => {

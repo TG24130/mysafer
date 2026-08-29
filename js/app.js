@@ -315,7 +315,7 @@ function renderGroups() {
       supprimable: Boolean(g.group.parentGroup),
       // Le compte affiché inclut les sous-répertoires : c'est ce que
       // l'utilisateur voit en cliquant dessus.
-      entryCount: entriesOf(g.group).length,
+      entryCount: entriesOf(db, g.group).length,
     }));
   }
 }
@@ -331,7 +331,7 @@ async function supprimerGroupe(groupe) {
   if (!groupe || !groupe.parentGroup) return false;   // jamais la racine
 
   const nom = groupName(groupe);
-  const combien = entriesOf(groupe).length;
+  const combien = entriesOf(db, groupe).length;
   const detail = combien === 0
     ? 'Il est vide.'
     : `Il contient ${combien} entrée${combien > 1 ? 's' : ''}, qui partiront avec lui.`;
@@ -455,7 +455,7 @@ function closeGroupPanel() {
 
 function visibleRows() {
   const base = selectedGroupUuid
-    ? entriesOf(groupByUuid(selectedGroupUuid) || db.getDefaultGroup())
+    ? entriesOf(db, groupByUuid(selectedGroupUuid) || db.getDefaultGroup())
     : allEntries(db);
   // Ordre du fichier, et non ordre alphabétique : c'est l'utilisateur qui
   // range, par appui long puis déplacement. Trier ici annulerait chaque dépôt

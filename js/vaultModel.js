@@ -86,13 +86,30 @@ export function flattenGroups(db, { includeRecycleBin = false } = {}) {
 
 /**
  * Liste les entrées d'un groupe.
+ *
+ * La corbeille est écartée de la descente récursive. Elle est un sous-groupe
+ * de la racine comme un autre : sans cette exclusion, une entrée supprimée
+ * restait comptée dans la racine et réapparaissait dans sa liste, ce qui
+ * donnait une suppression qui « ne prend pas ».
+ *
+ * Le coffre est le premier argument pour que l'exclusion ne puisse pas être
+ * oubliée à l'appel — c'est exactement l'oubli qui a produit le défaut.
+ *
+ * @param {object}  db        coffre (instance Kdbx), pour connaître la corbeille
+ * @param {object}  group     groupe de départ
  * @param {boolean} recursive inclure les sous-groupes
  */
-export function entriesOf(group, recursive = true) {
+export function entriesOf(db, group, recursive = true) {
+  const recycleBinUuid = db && db.meta && db.meta.recycleBinUuid
+    ? String(db.meta.recycleBinUuid) : null;
   const out = [];
   const walk = (g) => {
     for (const e of g.entries) out.push({ entry: e, group: g });
-    if (recursive) for (const sub of g.groups) walk(sub);
+    if (!recursive) return;
+    for (const sub of g.groups) {
+      if (recycleBinUuid !== null && String(sub.uuid) === recycleBinUuid) continue;
+      walk(sub);
+    }
   };
   walk(group);
   return out;
