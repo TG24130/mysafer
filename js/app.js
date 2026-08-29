@@ -333,14 +333,22 @@ function renderGroups() {
   const total = allEntries(db).length;
   list.append(groupItem({ uuid: null, name: 'Tout', depth: 0, entryCount: total }));
 
+  // La racine n'est pas listée : un fichier KDBX n'en a qu'une, tous les
+  // répertoires en descendent, et « Tout » donne déjà exactement la même
+  // liste. C'était une ligne qui doublait la première, ne se supprimait pas
+  // (c'est le coffre lui-même) et ne se déplaçait pas, faute de frère. Elle
+  // reste proposée dans le sélecteur de la fiche d'entrée, où elle sert
+  // vraiment : y ranger une entrée hors de tout répertoire.
   for (const g of flattenGroups(db)) {
+    if (!g.group.parentGroup) continue;
     list.append(groupItem({
       uuid: g.uuid,
       name: g.name,
-      depth: g.depth,
-      parentUuid: g.group.parentGroup ? String(g.group.parentGroup.uuid) : '',
-      // La racine n'a pas de parent : c'est le coffre, pas un répertoire.
-      supprimable: Boolean(g.group.parentGroup),
+      // La racine ayant disparu de la liste, ses enfants sont au premier
+      // niveau : sans ce décalage ils garderaient une indentation orpheline.
+      depth: g.depth - 1,
+      parentUuid: String(g.group.parentGroup.uuid),
+      supprimable: true,
       // Le compte affiché inclut les sous-répertoires : c'est ce que
       // l'utilisateur voit en cliquant dessus.
       entryCount: entriesOf(db, g.group).length,
@@ -414,8 +422,7 @@ function groupItem({ uuid, name, depth, entryCount, parentUuid, supprimable }) {
     closeGroupPanel();
   });
 
-  // « Tout » et la racine ne se suppriment pas : l'une n'est pas un
-  // répertoire, l'autre est le coffre lui-même.
+  // « Tout » n'est pas un répertoire : rien à supprimer ni à déplacer.
   if (!supprimable) {
     li.append(btn);
     return li;
