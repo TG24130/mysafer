@@ -268,6 +268,10 @@ Direction retenue par l'utilisateur contre l'assignation du tirage (seed
 `660b8c59`). Le contrat complet est en commentaire HTML en tête de `<body>` dans
 `index.html` ; **le lire avant toute modification d'interface.**
 
+**Une seule gravure garde sa casse : le nom du produit.** « MySafer » est un
+nom propre, pas une légende ; il est donc en casse mixte et resserré, quand
+toutes les autres gravures restent en capitales très espacées.
+
 **Loi de couleur, non négociable : ambre = état, orange = geste qui commet.**
 Un orange qui ne commet rien est un défaut ; un état peint en orange aussi.
 
