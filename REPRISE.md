@@ -1,6 +1,6 @@
 # Reprise de session — MySafer
 
-Dernière session : **2026-08-28**.
+Dernière session : **2026-08-29**.
 
 À lire en premier au démarrage d'une session. Ce fichier dit **l'état, les
 décisions et les pièges** — pas l'histoire de leur découverte. Le détail
@@ -27,7 +27,7 @@ réel du code trois fois en une journée.
 npm test
 ```
 
-Six suites, **94 tests**. Site en ligne : **https://tg24130.github.io/mysafer/**
+Six suites, **96 tests**. Site en ligne : **https://tg24130.github.io/mysafer/**
 Dépôt public `TG24130/mysafer`, GitHub Pages depuis `main`, racine.
 
 ---
@@ -50,7 +50,8 @@ horodatées, protégé contre l'écrasement, exportable, et lisible par KeePassX
 vérifié, pas supposé.
 
 Ajouts postérieurs aux phases : suppression d'entrée et de répertoire par
-balayage, réordonnancement au doigt, adresse postale dans la fiche, icône.
+balayage, réordonnancement au doigt, adresse postale dans la fiche, icône,
+bouton « Trier » qui réécrit l'ordre alphabétique une bonne fois.
 
 ---
 
@@ -60,15 +61,14 @@ balayage, réordonnancement au doigt, adresse postale dans la fiche, icône.
    publiée, syntaxe et tests au vert, mais jamais exécutée : le panneau
    navigateur s'est mis à bloquer toutes les ressources locales en fin de
    session. C'est le seul point non éprouvé du projet.
-2. **Le tri alphabétique a disparu**, remplacé par l'ordre manuel. Si une longue
-   liste le fait regretter, ajouter un bouton « trier » qui réécrit l'ordre une
-   bonne fois, plutôt qu'un tri permanent qui lutterait contre chaque dépôt.
-3. **Effacer le coffre local** n'est possible que par la console du navigateur
+2. **Effacer le coffre local** n'est possible que par la console du navigateur
    (`indexedDB.deleteDatabase('coffre_db')`). `destroyLocalVault()` existe dans
    `vaultDb.js` mais n'est branché sur aucun bouton.
-4. **Vérifications manuelles en attente** : ouvrir un `.kdbx` exporté dans
+3. **Vérifications manuelles en attente** : ouvrir un `.kdbx` exporté dans
    **KeePassDX sur Android** (KeePassXC est fait, sur PC), et lancer le
    diagnostic PRF sur d'autres appareils avant de les enrôler.
+4. **Le tri ne concerne que les entrées.** Les répertoires se rangent au doigt,
+   sans bouton. Le mécanisme serait le même si le besoin apparaît.
 
 ---
 
@@ -104,7 +104,7 @@ navigateur ni du réseau, pour être testable sous Node.**
 
 | Module | Rôle | Testable |
 |---|---|---|
-| `vaultModel.js` | lecture du contenu, fonctions pures | oui (26) |
+| `vaultModel.js` | lecture du contenu, fonctions pures | oui (28) |
 | `generator.js` | génération de secrets | oui (20) |
 | `lockTimer.js` | inactivité, visibilité | oui (18) |
 | `mergeCycle.js` | cycle de fusion, transport injecté | oui (10) |
@@ -163,6 +163,20 @@ panne la plus dangereuse du lot.
 Un test qui s'exécute d'un trait fait tout tomber dans la même seconde : les
 temps sont à égalité, la fusion ne peut pas trancher, et la divergence paraît
 permanente. Les tests datent donc tout explicitement.
+
+### La corbeille est un sous-groupe comme un autre
+
+`flattenGroups` et `allEntries` l'excluaient ; `entriesOf` non — elle descendait
+dans tous les sous-groupes. Comme la corbeille est fille de la racine, une
+entrée supprimée y restait comptée : le répertoire racine annonçait `3` avec une
+liste vide ailleurs, et cliquer dessus la faisait réapparaître, sous-titrée
+« Recycle Bin ». La re-supprimer ne faisait rien — elle était déjà à la
+corbeille. Vu de l'utilisateur : « la suppression ne prend pas ».
+
+Le coffre est désormais le **premier** argument de `entriesOf(db, group,
+recursive)`, obligatoire, pour que l'exclusion ne puisse plus être oubliée à
+l'appel. Toute nouvelle fonction qui parcourt les sous-groupes doit se poser la
+question.
 
 ### Autres pièges de code
 

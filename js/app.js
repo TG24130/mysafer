@@ -486,6 +486,58 @@ function renderEntries() {
 
   for (const { entry, group } of rows) list.append(entryItem(entry, group));
   $('entry-empty').hidden = rows.length > 0;
+
+  // Rien à trier sous deux entrées ; et pendant une recherche la liste n'est
+  // qu'un sous-ensemble déjà trié — réécrire le fichier sur cette vue-là
+  // toucherait des entrées que l'utilisateur n'a pas sous les yeux.
+  $('btn-sort').hidden = rechercheActive() || rows.length < 2;
+}
+
+/**
+ * Réécrit l'ordre du fichier par ordre alphabétique, une bonne fois.
+ *
+ * Ce n'est pas un mode d'affichage : l'ordre est inscrit dans le KDBX, donc
+ * exporté et retrouvé dans KeePassXC. Après le tri, le rangement au doigt
+ * reprend la main — c'est ce qui distingue ce bouton d'un tri permanent, qui
+ * annulerait chaque dépôt à la seconde suivante.
+ *
+ * KDBX range les entrées répertoire par répertoire : trier « Tout », ou un
+ * répertoire qui a des sous-répertoires, trie les entrées de chacun entre
+ * elles. Il n'existe pas d'ordre global à écrire.
+ */
+async function trierEntrees() {
+  const cible = selectedGroupUuid
+    ? (groupByUuid(selectedGroupUuid) || db.getDefaultGroup())
+    : null;
+  const rows = cible ? entriesOf(db, cible) : allEntries(db);
+  if (rows.length < 2) return;
+
+  const parGroupe = new Map();
+  for (const row of rows) {
+    if (!parGroupe.has(row.group)) parGroupe.set(row.group, []);
+    parGroupe.get(row.group).push(row);
+  }
+
+  const quoi = cible ? '« ' + groupName(cible) + ' »' : 'tout le coffre';
+  const combien = parGroupe.size > 1
+    ? `
+
+${rows.length} entrées réparties dans ${parGroupe.size} répertoires : `
+      + 'chaque répertoire est trié séparément.'
+    : '';
+  if (!confirm(`Trier ${quoi} par ordre alphabétique ?${combien}
+
+`
+    + "L'ordre rangé à la main sera remplacé dans le fichier lui-même, donc "
+    + 'aussi dans KeePassXC. Le rangement au doigt reste possible ensuite.')) return;
+
+  for (const [groupe, liste] of parGroupe) {
+    const ordonne = sortByTitle(liste);
+    for (let i = 0; i < ordonne.length; i += 1) db.move(ordonne[i].entry, groupe, i);
+  }
+
+  await persist();
+  renderEntries();
 }
 
 // Distance de révélation, en pixels : la largeur de la touche découverte.
@@ -975,6 +1027,7 @@ $('btn-add-group').addEventListener('click', async () => {
 });
 
 $('btn-add').addEventListener('click', openNewEntry);
+$('btn-sort').addEventListener('click', trierEntrees);
 $('input-search').addEventListener('input', renderEntries);
 
 $('btn-lock').addEventListener('click', () => lockVault('manuel'));

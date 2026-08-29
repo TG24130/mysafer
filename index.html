@@ -187,6 +187,10 @@
         <input type="search" id="input-search" class="search" placeholder="Rechercher"
                autocomplete="off" spellcheck="false" aria-label="Rechercher une entrée">
         <button type="button" id="btn-add" class="key">Ajouter</button>
+        <!-- Le tri est un geste, pas un mode : il réécrit l'ordre du fichier
+             une bonne fois, puis rend la main au rangement manuel. Un tri
+             permanent lutterait contre chaque dépôt au doigt. -->
+        <button type="button" id="btn-sort" class="key" hidden>Trier</button>
       </div>
 
       <!-- Deux coffres sans ancêtre commun. On ne tranche pas à la place de
