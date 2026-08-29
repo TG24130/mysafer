@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Aucun script, aucune origine tierce : cette page s'ouvre hors ligne, et
+     ne peut rien charger même servie depuis le site. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="color-scheme" content="light dark">
+<title>Prise en main de MySafer</title>
+<style>
+  /* ---------------------------------------------------------------
+     Palette : l'appareil MySafer transposé sur du papier.
+     Gunmetal pour l'encre, os pour la feuille, ambre pour l'état,
+     orange sécurité réservé au seul geste qui commet — copier.
+     --------------------------------------------------------------- */
+  :root {
+    --feuille:      #FDFCFA;
+    --ground:       #DAD6CE;
+    --encre:        #1B1F23;
+    --encre-douce:  #4C555D;
+    --encre-pale:   #7E8891;
+    --filet:        #C8C3B9;
+    --filet-fin:    #E3DFD7;
+    --ambre:        #9A6B12;
+    --ambre-fond:   #FBF1DC;
+    --orange:       #C4551A;
+    --alerte:       #9E2B1E;
+    --alerte-fond:  #FBEBE8;
+    --touche-fond:  #EFEBE2;
+
+    --pas: 1.7rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --feuille:     #1A1E21;
+      --ground:      #101315;
+      --encre:       #E9E5DC;
+      --encre-douce: #B3AFA6;
+      --encre-pale:  #8A8780;
+      --filet:       #363C41;
+      --filet-fin:   #272C30;
+      --ambre:       #E3B457;
+      --ambre-fond:  #2A2317;
+      --orange:      #F0793A;
+      --alerte:      #F0918A;
+      --alerte-fond: #2C1A18;
+      --touche-fond: #262B2F;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --feuille:     #1A1E21;
+    --ground:      #101315;
+    --encre:       #E9E5DC;
+    --encre-douce: #B3AFA6;
+    --encre-pale:  #8A8780;
+    --filet:       #363C41;
+    --filet-fin:   #272C30;
+    --ambre:       #E3B457;
+    --ambre-fond:  #2A2317;
+    --orange:      #F0793A;
+    --alerte:      #F0918A;
+    --alerte-fond: #2C1A18;
+    --touche-fond: #262B2F;
+  }
+
+  body {
+    margin: 0;
+    padding: 2.5rem 1rem 4rem;
+    background: var(--ground);
+    color: var(--encre);
+    font-family: Georgia, "Times New Roman", "Liberation Serif", serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .feuille {
+    max-width: 178mm;
+    margin: 0 auto;
+    padding: 18mm 16mm 16mm;
+    background: var(--feuille);
+    box-shadow: 0 1px 0 var(--filet), 0 18px 40px rgb(0 0 0 / .18);
+  }
+
+  /* --- Titrage ------------------------------------------------- */
+
+  .cartouche {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .8rem 1.2rem;
+    padding-bottom: .9rem;
+    border-bottom: 2px solid var(--encre);
+  }
+
+  h1 {
+    margin: 0;
+    font-family: "Arial Narrow", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+    font-size: 30pt;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -.005em;
+    text-wrap: balance;
+  }
+
+  .cartouche-ref {
+    margin: 0;
+    margin-left: auto;
+    font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+    font-size: 7.5pt;
+    font-weight: 500;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--encre-pale);
+  }
+
+  .chapeau {
+    margin: 1.1rem 0 0;
+    max-width: 62ch;
+    font-size: 11.5pt;
+    line-height: 1.5;
+    color: var(--encre-douce);
+  }
+
+  h2 {
+    margin: 0;
+    font-family: "Arial Narrow", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+    font-size: 15pt;
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  h3 {
+    margin: 0 0 .35rem;
+    font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+    font-size: 8pt;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--encre-pale);
+  }
+
+  p { margin: 0; max-width: 64ch; }
+  p + p { margin-top: .55rem; }
+
+  /* --- Corps ---------------------------------------------------- */
+
+  main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pas);
+    margin-top: var(--pas);
+  }
+
+  /* Les étapes sont une vraie séquence : on ne peut pas copier un mot
+     de passe avant d'avoir créé le coffre. Le numéro dit l'ordre, il
+     ne décore pas. */
+  .etape {
+    display: grid;
+    grid-template-columns: 2.6rem 1fr;
+    gap: 0 1rem;
+    break-inside: avoid;
+  }
+
+  .rang {
+    grid-row: 1 / span 2;
+    font-family: "Arial Narrow", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+    font-size: 22pt;
+    font-weight: 700;
+    line-height: .95;
+    color: var(--filet);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .etape-corps {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    margin-top: .5rem;
+  }
+
+  ol.marche, ul.puces {
+    margin: 0;
+    padding-left: 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+    max-width: 64ch;
+  }
+  ol.marche li::marker { color: var(--encre-pale); font-weight: 600; }
+  ul.puces li::marker  { color: var(--filet); }
+
+  /* --- Touches de l'appareil ------------------------------------ */
+
+  .touche {
+    display: inline-block;
+    padding: .05em .42em .1em;
+    background: var(--touche-fond);
+    border: 1px solid var(--filet);
+    border-radius: 2px;
+    font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+    font-size: .82em;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* L'orange ne sert qu'au geste qui commet, ici comme dans l'app. */
+  .touche.commet {
+    color: var(--orange);
+    border-color: var(--orange);
+  }
+
+  .champ {
+    font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+    font-size: .85em;
+    font-weight: 500;
+  }
+
+  em { font-style: italic; }
+  strong { font-weight: 600; }
+
+  /* --- Encadrés -------------------------------------------------- */
+
+  .encadre {
+    padding: .85rem 1rem;
+    border-left: 3px solid var(--ambre);
+    background: var(--ambre-fond);
+    break-inside: avoid;
+  }
+  .encadre h3 { color: var(--ambre); }
+  .encadre p  { max-width: 60ch; }
+
+  .encadre.grave {
+    border-left-color: var(--alerte);
+    background: var(--alerte-fond);
+  }
+  .encadre.grave h3 { color: var(--alerte); }
+
+  /* --- Tableau des repères -------------------------------------- */
+
+  .reperes {
+    border-top: 1px solid var(--encre);
+    padding-top: .9rem;
+    break-inside: avoid;
+  }
+
+  .grille-reperes {
+    display: grid;
+    /* min() : sans lui, une colonne plus étroite que le minimum déborde
+       au lieu de se replier — cas du téléphone tenu en portrait. */
+    grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+    gap: .75rem 2rem;
+    margin-top: .7rem;
+  }
+
+  .repere {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0 .8rem;
+    align-items: baseline;
+    padding-bottom: .45rem;
+    border-bottom: 1px solid var(--filet-fin);
+  }
+  .repere dt { color: var(--encre-douce); }
+  .repere dd {
+    margin: 0;
+    font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+    font-size: .88em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* --- Deux colonnes pour les cas de figure ---------------------- */
+
+  .deux {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+    gap: 1rem 2rem;
+  }
+  .deux > div { display: flex; flex-direction: column; gap: .3rem; }
+
+  /* --- Pied ------------------------------------------------------ */
+
+  footer {
+    margin-top: var(--pas);
+    padding-top: .8rem;
+    border-top: 2px solid var(--encre);
+    font-size: 9pt;
+    color: var(--encre-pale);
+    break-inside: avoid;
+  }
+  footer p { max-width: 68ch; }
+
+  a { color: inherit; text-decoration-color: var(--filet); }
+  a:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 2px;
+  }
+
+  /* --- Commande d'impression, absente de la feuille imprimée ----- */
+
+  .barre {
+    max-width: 178mm;
+    margin: 0 auto .9rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .barre {
+    font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+    font-size: 8pt;
+    letter-spacing: .06em;
+    color: var(--encre-pale);
+  }
+
+  /* --- Impression A4 --------------------------------------------- */
+
+  /* Écran étroit : la feuille garde ses marges pour l'impression, pas pour
+     la lecture au pouce. */
+  @media screen and (max-width: 640px) {
+    body { padding: 1.25rem .5rem 2rem; }
+    .feuille { padding: 8mm 6mm 8mm; }
+    .etape { grid-template-columns: 1.9rem 1fr; gap: 0 .7rem; }
+    .rang { font-size: 17pt; }
+  }
+
+  @page {
+    size: A4;
+    margin: 15mm 16mm 14mm;
+  }
+
+  @media print {
+    /* Même spécificité que les blocs de thème ci-dessus, et placé après :
+       sans cela, un lecteur en thème sombre imprimerait du blanc sur noir. */
+    :root, :root[data-theme], :root:not([data-theme="light"]) {
+      --feuille:     #FFFFFF;
+      --ground:      #FFFFFF;
+      --encre:       #000000;
+      --encre-douce: #333333;
+      --encre-pale:  #5A5A5A;
+      --filet:       #9A9A9A;
+      --filet-fin:   #CFCFCF;
+      --ambre:       #6B4A08;
+      --ambre-fond:  #F6F1E5;
+      --orange:      #A63F0E;
+      --alerte:      #7C1E13;
+      --alerte-fond: #F7EDEB;
+      --touche-fond: #F1F1F1;
+    }
+    body { padding: 0; background: #fff; font-size: 10pt; }
+    .feuille { max-width: none; margin: 0; padding: 0; box-shadow: none; }
+    .barre { display: none; }
+    h1 { font-size: 26pt; }
+    h2 { font-size: 13.5pt; }
+    .rang { color: #B0B0B0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+
+<body>
+
+<p class="barre">Imprimer&nbsp;: Ctrl+P, ou &#8984;+P sur Mac. La mise en page A4 est déjà réglée.</p>
+
+<div class="feuille">
+
+  <header class="cartouche">
+    <h1>Prise en main de MySafer</h1>
+    <p class="cartouche-ref">Coffre personnel · KDBX 4</p>
+  </header>
+
+  <p class="chapeau">
+    MySafer garde vos mots de passe chiffrés sur votre appareil. Une seule
+    phrase les ouvre tous, et personne d'autre que vous ne la connaît — pas
+    même le service qui héberge vos copies en ligne. Voici comment démarrer,
+    dans l'ordre.
+  </p>
+
+  <main>
+
+    <section class="encadre grave">
+      <h3>À lire avant tout le reste</h3>
+      <p>
+        <strong>Si vous perdez votre phrase de passe maîtresse, votre coffre est
+        perdu.</strong> Aucun bouton « mot de passe oublié » n'existe, ici ni
+        ailleurs : c'est le prix de la confidentialité. Écrivez-la sur papier,
+        rangez ce papier là où vous rangez vos documents importants.
+      </p>
+    </section>
+
+    <section class="etape">
+      <div class="rang">1</div>
+      <h2>Créer votre coffre</h2>
+      <div class="etape-corps">
+        <p>
+          Au premier lancement, l'application propose de créer un coffre. Elle ne
+          demande ni compte ni adresse : tout se passe sur votre appareil.
+        </p>
+        <ol class="marche">
+          <li>
+            Pressez <span class="touche">Générer une phrase de 6 mots</span>.
+            Six mots apparaissent. <em>Ils sont en anglais, c'est voulu</em> : les
+            mots français portent des accents, qui se tapent différemment d'un
+            clavier à l'autre.
+          </li>
+          <li>
+            <strong>Recopiez-les sur papier immédiatement</strong>, avec les
+            espaces, avant de continuer.
+          </li>
+          <li>Ressaisissez la phrase dans le champ <span class="champ">Confirmation</span>.</li>
+          <li>Pressez <span class="touche">Créer le coffre</span>.</li>
+        </ol>
+        <p>
+          L'ouverture prend une à deux secondes. C'est normal : ce temps est
+          exactement ce qui décourage quelqu'un qui essaierait des millions de
+          phrases.
+        </p>
+      </div>
+    </section>
+
+    <section class="etape">
+      <div class="rang">2</div>
+      <h2>Retrouver votre coffre sur vos autres appareils</h2>
+      <div class="etape-corps">
+        <p>
+          Facultatif, mais c'est ce qui vous donne le même coffre sur le
+          téléphone et sur l'ordinateur — et une copie de secours en ligne.
+        </p>
+        <p>
+          En bas de l'écran d'ouverture, sous <span class="touche">Synchronisation</span>,
+          saisissez une adresse e-mail et un mot de passe, puis
+          <span class="touche">Se connecter</span>. Refaites-le sur l'autre
+          appareil avec les <em>mêmes</em> identifiants, et déverrouillez avec
+          la <em>même</em> phrase maîtresse : les deux coffres se rejoignent.
+        </p>
+        <div class="encadre">
+          <h3>Deux secrets à ne pas confondre</h3>
+          <p>
+            Le mot de passe du compte sert seulement à retrouver votre fichier en
+            ligne. Il ne déchiffre rien. La phrase maîtresse, elle, ne quitte
+            jamais votre appareil — c'est elle qui ouvre le coffre.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="etape">
+      <div class="rang">3</div>
+      <h2>Ouvrir par empreinte ou par visage</h2>
+      <div class="etape-corps">
+        <p>
+          Pour ne plus taper six mots à chaque ouverture. Allez dans
+          <span class="touche">Réglages</span>, section
+          <span class="touche">Ouverture biométrique</span>, confirmez votre
+          phrase maîtresse et pressez <span class="touche">Activer</span>.
+        </p>
+        <p>
+          Un bouton <span class="touche">Déverrouiller par biométrie</span>
+          apparaîtra désormais à l'ouverture. La phrase reste toujours
+          acceptée en dessous : la biométrie est un raccourci, jamais un
+          passage obligé. Si la section n'apparaît pas, votre appareil ne sait
+          pas le faire — rien n'est cassé.
+        </p>
+      </div>
+    </section>
+
+    <section class="etape">
+      <div class="rang">4</div>
+      <h2>Enregistrer un mot de passe</h2>
+      <div class="etape-corps">
+        <ol class="marche">
+          <li>Pressez <span class="touche">Ajouter</span>.</li>
+          <li>
+            Remplissez au minimum <span class="champ">Titre</span> — le nom du
+            site ou du service — et <span class="champ">Identifiant</span>.
+          </li>
+          <li>
+            Pour le mot de passe, laissez l'application le fabriquer :
+            <span class="touche">Mot de passe (20)</span> pour un site,
+            <span class="touche">Phrase (6 mots)</span> quand vous devrez le
+            retaper à la main.
+          </li>
+          <li>
+            Choisissez un <span class="champ">Répertoire</span> si vous en avez
+            créé, puis <span class="touche">Enregistrer</span>.
+          </li>
+        </ol>
+        <p>
+          Les champs <span class="champ">Adresse web</span>,
+          <span class="champ">Adresse</span>,
+          <span class="champ">Code postal</span>,
+          <span class="champ">Ville</span> et
+          <span class="champ">Notes</span> sont libres. Tout est chiffré de la
+          même façon.
+        </p>
+      </div>
+    </section>
+
+    <section class="etape">
+      <div class="rang">5</div>
+      <h2>Retrouver et copier un mot de passe</h2>
+      <div class="etape-corps">
+        <p>
+          C'est le geste que vous ferez cent fois. Tapez quelques lettres dans
+          <span class="champ">Rechercher</span>, puis pressez la touche orange
+          <span class="touche commet">Copier</span> à droite de la ligne. Le mot
+          de passe part dans le presse-papiers : collez-le où il faut.
+        </p>
+        <p>
+          <strong>Le presse-papiers s'efface tout seul au bout de 25 secondes</strong>,
+          pour qu'un mot de passe ne traîne pas derrière vous.
+        </p>
+        <p>
+          Pour voir le reste d'une entrée — identifiant, notes, adresse —
+          pressez la ligne elle-même plutôt que la touche orange.
+        </p>
+      </div>
+    </section>
+
+    <section class="etape">
+      <div class="rang">6</div>
+      <h2>Ranger : répertoires, ordre, tri</h2>
+      <div class="etape-corps">
+        <p>
+          Dans <span class="touche">Répertoires</span>, la touche
+          <span class="touche">Nouveau répertoire</span> en crée un.
+          <span class="touche">Tout</span>, en tête de liste, affiche toujours
+          l'ensemble du coffre.
+        </p>
+        <ul class="puces">
+          <li>
+            <strong>Changer l'ordre</strong> : appui long sur une ligne, puis
+            déplacez-la. L'ordre choisi est conservé dans le fichier.
+          </li>
+          <li>
+            <strong>Tout classer d'un coup</strong> : la touche
+            <span class="touche">Trier</span> range par ordre alphabétique, une
+            bonne fois. Elle apparaît dès qu'il y a deux entrées à l'écran. Vous
+            pourrez toujours redéplacer à la main ensuite.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="etape">
+      <div class="rang">7</div>
+      <h2>Modifier ou supprimer</h2>
+      <div class="etape-corps">
+        <p>
+          Pour modifier : ouvrez l'entrée, changez ce qu'il faut,
+          <span class="touche">Enregistrer</span>.
+        </p>
+        <div class="deux">
+          <div>
+            <h3>Sur téléphone</h3>
+            <p>
+              Balayez la ligne <strong>vers la gauche</strong> : une touche rouge
+              <span class="touche">Supprimer</span> se découvre. Une confirmation
+              vous est demandée.
+            </p>
+          </div>
+          <div>
+            <h3>Sur ordinateur</h3>
+            <p>
+              Ouvrez l'entrée et pressez <span class="touche">Supprimer</span> en
+              bas de la fiche. Pour un répertoire : cliquez sa ligne, puis la
+              touche <span class="touche">Suppr</span> du clavier.
+            </p>
+          </div>
+        </div>
+        <p>
+          Rien n'est détruit : la suppression range à la corbeille du fichier,
+          d'où KeePassXC peut récupérer l'entrée.
+        </p>
+      </div>
+    </section>
+
+    <section class="etape">
+      <div class="rang">8</div>
+      <h2>Faire une copie sur votre disque</h2>
+      <div class="etape-corps">
+        <p>
+          <span class="touche">Réglages</span> ›
+          <span class="touche">Exporter le coffre</span> enregistre un fichier
+          <span class="champ">.kdbx</span> sur votre appareil. C'est la seule
+          copie qui ne dépende d'aucun compte : si votre compte Google fermait,
+          elle serait la seule à survivre.
+        </p>
+        <p>
+          Ce fichier s'ouvre dans <strong>KeePassXC</strong> (ordinateur) ou
+          <strong>KeePassDX</strong> (Android), avec la même phrase maîtresse.
+          Gardez-le sur une clé USB ou un disque externe, pas seulement sur
+          l'appareil qui contient déjà le coffre.
+        </p>
+        <p>
+          L'application vous le rappelle tous les <strong>30 jours</strong>.
+          C'est un rappel qu'il vaut mieux ne pas ignorer.
+        </p>
+      </div>
+    </section>
+
+    <section class="reperes">
+      <h2>Repères</h2>
+      <div class="grille-reperes">
+        <dl class="repere">
+          <dt>Verrouillage sans activité</dt>
+          <dd>5 min</dd>
+        </dl>
+        <dl class="repere">
+          <dt>Effacement du presse-papiers</dt>
+          <dd>25 s</dd>
+        </dl>
+        <dl class="repere">
+          <dt>Rappel de copie sur disque</dt>
+          <dd>30 jours</dd>
+        </dl>
+        <dl class="repere">
+          <dt>Compte à rebours affiché</dt>
+          <dd>dernière minute</dd>
+        </dl>
+        <dl class="repere">
+          <dt>Longueur de la phrase maîtresse</dt>
+          <dd>6 mots</dd>
+        </dl>
+        <dl class="repere">
+          <dt>Format du fichier</dt>
+          <dd>KDBX 4</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="reperes">
+      <h2>Lire le bandeau du haut</h2>
+      <div class="etape-corps">
+        <p>
+          Il affiche l'état de l'appareil, puis le jour et la date. Dans la
+          dernière minute avant le verrouillage, un compte à rebours s'y ajoute
+          et vire au rouge.
+        </p>
+        <ul class="puces">
+          <li><span class="champ">Prêt</span> — rien en cours.</li>
+          <li><span class="champ">Synchronisation…</span> — échange avec la copie en ligne.</li>
+          <li><span class="champ">Synchronisé</span> — les deux copies concordent.</li>
+        </ul>
+        <p>
+          La synchronisation a lieu à l'ouverture et à chaque enregistrement,
+          jamais en continu. La touche <span class="touche">Verrouiller</span>,
+          à droite, referme le coffre immédiatement.
+        </p>
+      </div>
+    </section>
+
+    <section class="reperes">
+      <h2>Si quelque chose cloche</h2>
+      <div class="etape-corps">
+        <ul class="puces">
+          <li>
+            <strong>Sur ordinateur, je ne vois pas les boutons du bas.</strong>
+            C'est normal : au-delà d'une certaine largeur de fenêtre, les trois
+            vues s'affichent côte à côte et la barre du bas disparaît.
+          </li>
+          <li>
+            <strong>La touche <span class="touche">Trier</span> a disparu.</strong>
+            Elle se retire pendant une recherche, et en dessous de deux entrées.
+          </li>
+          <li>
+            <strong>L'état reste sur <span class="champ">Synchronisation…</span>.</strong>
+            Votre coffre local est intact — seul l'envoi a échoué. Il repartira
+            au prochain enregistrement.
+          </li>
+          <li>
+            <strong>Un doute sur l'appareil.</strong> Le lien
+            <span class="touche">Diagnostic de cet appareil</span>, en bas des
+            réglages, vérifie la biométrie, le presse-papiers et la rapidité.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>
+      MySafer chiffre tout sur votre appareil avant que quoi que ce soit ne
+      parte en ligne. La contrepartie tient en une phrase : personne ne peut
+      vous rendre l'accès si vous perdez la vôtre. Le papier sur lequel vous
+      l'avez écrite fait partie du dispositif.
+    </p>
+  </footer>
+
+</div>
+</body>
+</html>
