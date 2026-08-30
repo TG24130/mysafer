@@ -51,7 +51,10 @@ vérifié, pas supposé.
 
 Ajouts postérieurs aux phases : suppression d'entrée et de répertoire par
 balayage, réordonnancement au doigt, adresse postale dans la fiche, icône,
-bouton « Trier » qui réécrit l'ordre alphabétique une bonne fois.
+bouton « Trier » qui réécrit l'ordre alphabétique une bonne fois, duplication
+d'entrée vers le répertoire choisi, import d'un `.kdbx` (l'export n'avait pas
+de symétrique : la sauvegarde n'était restaurable que dans KeePassXC), mode
+d'emploi imprimable dans `docs/`.
 
 ---
 
@@ -163,6 +166,19 @@ panne la plus dangereuse du lot.
 Un test qui s'exécute d'un trait fait tout tomber dans la même seconde : les
 temps sont à égalité, la fusion ne peut pas trancher, et la divergence paraît
 permanente. Les tests datent donc tout explicitement.
+
+### Un fichier n'est installé qu'une fois sa phrase acceptée
+
+L'import de `.kdbx` ne réécrit rien lui-même : il pose les octets dans
+`octetsAInstaller`, verrouille, et laisse l'écran de déverrouillage faire le
+travail — le même chemin que la récupération d'un coffre en ligne sur un
+appareil neuf. `adoptRemoteVault()` n'écrit dans IndexedDB qu'après une
+ouverture réussie, et retire l'enrôlement biométrique, qui emballait l'ancienne
+phrase. Une phrase erronée, un fichier illisible ou un rechargement en cours de
+route laissent donc le coffre existant intact.
+
+Toute nouvelle façon d'installer un coffre doit passer par là plutôt que
+d'appeler `saveVaultBytes()` directement.
 
 ### La corbeille est un sous-groupe comme un autre
 

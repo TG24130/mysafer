@@ -253,6 +253,21 @@
           Le fichier exporté s'ouvre dans KeePassXC ou KeePassDX. C'est la seule
           copie qui ne dépende d'aucun compte.
         </p>
+
+        <!-- Restauration. Le fichier n'est pas installé ici : il est mis en
+             attente, et le déverrouillage qui suit sert de vérification. Rien
+             n'est écrasé tant que sa phrase n'a pas été acceptée. -->
+        <input type="file" id="input-import" accept=".kdbx,application/x-keepass"
+               hidden aria-hidden="true" tabindex="-1">
+        <button type="button" id="btn-import" class="key key-block">
+          Importer un coffre
+        </button>
+        <p class="note">
+          Reprend un fichier <code>.kdbx</code> exporté d'ici, de KeePassXC ou de
+          KeePassDX. Il remplacera le coffre de cet appareil, et vous devrez
+          saisir <em>sa</em> phrase de passe.
+        </p>
+        <p id="import-error" class="note note-alert" role="alert" hidden></p>
       </section>
 
       <!-- Masquée si l'appareil ne sait pas la faire : inutile d'exposer une

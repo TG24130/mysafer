@@ -289,7 +289,8 @@ $('btn-conflict-pull').addEventListener('click', () => {
 
   // On repasse par l'écran de déverrouillage : le coffre distant a sa propre
   // phrase maîtresse, et il ne sera installé qu'une fois celle-ci vérifiée.
-  pendingRemoteBytes = octetsEnConflit;
+  octetsAInstaller = octetsEnConflit;
+  origineAInstaller = 'ligne';
   octetsEnConflit = null;
   $('sync-conflict').hidden = true;
   lockVault('conflit');
@@ -1062,8 +1063,8 @@ $('form-unlock').addEventListener('submit', async (e) => {
     // Appareil neuf : le coffre vient d'être téléchargé et n'est pas encore
     // installé. On ne l'écrit dans IndexedDB qu'une fois la phrase vérifiée,
     // pour ne jamais stocker un fichier qu'on ne saurait pas rouvrir.
-    if (pendingRemoteBytes) {
-      db = await adoptRemoteVault(pendingRemoteBytes, $('input-master').value);
+    if (octetsAInstaller) {
+      db = await adoptRemoteVault(octetsAInstaller, $('input-master').value);
       // Le coffre local vient d'être remplacé par un autre, avec sa propre
       // phrase maîtresse. L'enrôlement biométrique emballait l'ancienne : le
       // garder produirait un déverrouillage qui échoue sans raison lisible.
@@ -1072,7 +1073,8 @@ $('form-unlock').addEventListener('submit', async (e) => {
     } else {
       db = await openVault(await loadVaultBytes(), $('input-master').value);
     }
-    pendingRemoteBytes = null;
+    octetsAInstaller = null;
+    origineAInstaller = null;
     $('input-master').value = '';
     selectedGroupUuid = null;
     $('input-search').value = '';
@@ -1126,6 +1128,79 @@ $('btn-export').addEventListener('click', async () => {
   // aurait une, il finirait par ne plus le lire.
   await setMeta(META.LAST_EXPORT, Date.now());
   majRappelExport();
+});
+
+// ---------------------------------------------------------------------------
+// Import d'un .kdbx
+// ---------------------------------------------------------------------------
+//
+// Symétrique de l'export, qui sans lui ne produisait qu'une sauvegarde
+// illisible par l'application qui l'avait écrite.
+//
+// Le fichier n'est pas installé ici. Il est seulement mis en attente, et
+// l'écran de déverrouillage sert de vérification : la même mécanique que la
+// récupération d'un coffre en ligne sur un appareil neuf, y compris l'écriture
+// dans IndexedDB seulement après acceptation de la phrase, et le retrait de
+// l'enrôlement biométrique qui emballait l'ancienne. Rien n'est donc écrasé
+// tant que le fichier n'a pas prouvé qu'il s'ouvre.
+
+// Signature d'un fichier KDBX : deux entiers 32 bits en tête. La vérifier
+// évite de faire saisir une phrase de passe pour un fichier qui n'est pas un
+// coffre, et de rendre l'échec incompréhensible.
+const KDBX_SIGNATURE = [0x9AA2D903, 0xB54BFB67];
+
+function estKdbx(bytes) {
+  if (!bytes || bytes.byteLength < 8) return false;
+  const vue = new DataView(bytes);
+  return vue.getUint32(0, true) === KDBX_SIGNATURE[0]
+    && vue.getUint32(4, true) === KDBX_SIGNATURE[1];
+}
+
+function setImportError(message) {
+  const el = $('import-error');
+  el.textContent = message || '';
+  el.hidden = !message;
+}
+
+$('btn-import').addEventListener('click', () => {
+  setImportError('');
+  // Réinitialisé pour que choisir deux fois le même fichier déclenche bien
+  // deux fois l'événement.
+  $('input-import').value = '';
+  $('input-import').click();
+});
+
+$('input-import').addEventListener('change', async () => {
+  const fichier = $('input-import').files[0];
+  if (!fichier) return;
+  setImportError('');
+
+  try {
+    const bytes = await fichier.arrayBuffer();
+
+    if (!estKdbx(bytes)) {
+      setImportError(`« ${fichier.name} » n'est pas un fichier de coffre KDBX.`);
+      return;
+    }
+
+    if (!confirm(
+      `Installer « ${fichier.name} » sur cet appareil ?\n\n`
+      + "Le coffre actuel de cet appareil sera remplacé. Exportez-le d'abord si "
+      + "vous tenez à son contenu.\n\n"
+      + "Vous devrez saisir la phrase de passe de CE fichier : c'est elle qui "
+      + "ouvrira le coffre ensuite. L'ouverture biométrique sera désactivée, à "
+      + "réactiver après coup.\n\n"
+      + 'Si la synchronisation est active, le coffre installé sera fusionné avec '
+      + "la copie en ligne à la prochaine synchronisation. Rien n'est perdu : "
+      + "l'historique en ligne conserve une copie horodatée.")) return;
+
+    octetsAInstaller = bytes;
+    origineAInstaller = 'fichier';
+    lockVault('import');
+    await refreshLockScreen();
+  } catch (err) {
+    setImportError('Lecture impossible : ' + (err && err.message ? err.message : String(err)));
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -1211,7 +1286,11 @@ window.addEventListener('pagehide', () => { clearNow(false); cancelPendingClear(
 
 // Coffre téléchargé depuis le cloud mais pas encore installé : il attend que
 // la phrase de passe maître le valide. Null le reste du temps.
-let pendingRemoteBytes = null;
+let octetsAInstaller = null;
+// D'où viennent ces octets : 'ligne' ou 'fichier'. Le message de l'écran de
+// déverrouillage en dépend, et un « récupéré en ligne » affiché après un
+// import de fichier serait un mensonge.
+let origineAInstaller = null;
 
 /**
  * Décide quel formulaire montrer sur l'écran de verrouillage.
@@ -1225,12 +1304,13 @@ let pendingRemoteBytes = null;
 async function refreshLockScreen() {
   const exists = await hasVault();
 
-  if (!exists && !pendingRemoteBytes && canSync()) {
+  if (!exists && !octetsAInstaller && canSync()) {
     setSyncStatus('Recherche du coffre en ligne…', 'busy');
     try {
-      pendingRemoteBytes = await downloadRemoteVault();
+      octetsAInstaller = await downloadRemoteVault();
+      origineAInstaller = octetsAInstaller ? 'ligne' : null;
       setSyncStatus('');
-      if (!pendingRemoteBytes) {
+      if (!octetsAInstaller) {
         $('account-state').textContent =
           `Connecté : ${authState.currentUser.email} — aucun coffre en ligne pour ce compte.`;
       }
@@ -1238,19 +1318,22 @@ async function refreshLockScreen() {
       // Ne pas avaler l'erreur : sans message, un téléchargement en panne est
       // indiscernable d'un compte sans coffre, et on proposerait d'en créer un
       // second au lieu de récupérer l'existant.
-      pendingRemoteBytes = null;
+      octetsAInstaller = null;
+      origineAInstaller = null;
       setError('Coffre en ligne inaccessible : ' + syncErrorMessage(err));
       $('account-state').textContent =
         `Connecté : ${authState.currentUser.email} — récupération impossible.`;
     }
   }
 
-  const déverrouiller = exists || Boolean(pendingRemoteBytes);
+  const déverrouiller = exists || Boolean(octetsAInstaller);
   $('form-unlock').hidden = !déverrouiller;
   $('form-create').hidden = déverrouiller;
-  $('unlock-sub').textContent = pendingRemoteBytes
-    ? 'Coffre récupéré en ligne. Saisissez votre phrase de passe maître pour l’installer sur cet appareil.'
-    : 'Saisissez votre phrase de passe maître.';
+  $('unlock-sub').textContent = !octetsAInstaller
+    ? 'Saisissez votre phrase de passe maître.'
+    : origineAInstaller === 'fichier'
+      ? 'Fichier prêt à être installé. Saisissez la phrase de passe de CE fichier — le coffre de cet appareil ne sera remplacé qu’ensuite.'
+      : 'Coffre récupéré en ligne. Saisissez votre phrase de passe maître pour l’installer sur cet appareil.';
 
   majBioDeverrouillage();
 
