@@ -830,6 +830,7 @@ function openDetail(entry, group) {
   creatingInGroup = null;
   $('detail-title').textContent = 'Modifier l\'entrée';
   $('btn-delete').hidden = false;
+  $('btn-duplicate').hidden = false;
 
   $('d-title').value = fieldText(entry, 'Title');
   $('d-username').value = fieldText(entry, 'UserName');
@@ -871,6 +872,8 @@ function openNewEntry() {
   creatingInGroup = currentGroup();
   $('detail-title').textContent = 'Nouvelle entrée';
   $('btn-delete').hidden = true;
+  // Rien à dupliquer tant que l'entrée n'existe pas.
+  $('btn-duplicate').hidden = true;
 
   for (const id of ['d-title', 'd-username', 'd-password', 'd-url', 'd-notes',
     ...CHAMPS_POSTAUX.map(([, id2]) => id2)]) $(id).value = '';
@@ -913,7 +916,22 @@ async function saveDetail(e) {
     if (actuel && actuel.uuid !== String(cible.uuid)) db.move(entry, cible);
   }
 
-  entry.fields.set('Title', $('d-title').value);
+  ecrireChamps(entry);
+
+  await persist();
+  closeDetail();
+  renderGroups();
+  renderEntries();
+}
+
+/**
+ * Reporte le formulaire sur une entrée. Chemin unique, partagé par
+ * l'enregistrement et la duplication : un champ ajouté ici suit les deux.
+ *
+ * @param {string} [titre] titre à écrire à la place de celui saisi.
+ */
+function ecrireChamps(entry, titre) {
+  entry.fields.set('Title', titre === undefined ? $('d-title').value : titre);
   entry.fields.set('UserName', $('d-username').value);
   entry.fields.set('URL', $('d-url').value);
   entry.fields.set('Notes', $('d-notes').value);
@@ -930,11 +948,35 @@ async function saveDetail(e) {
   // kdbxweb et marqué « protégé » dans le fichier KDBX.
   entry.fields.set('Password', kdbxweb.ProtectedValue.fromString($('d-password').value));
   entry.times.update();
+}
+
+/**
+ * Duplique l'entrée ouverte : un « enregistrer sous ».
+ *
+ * Ce que le formulaire décrit est écrit dans une entrée neuve, dans le
+ * répertoire choisi au sélecteur, et l'originale n'est pas touchée — pas même
+ * si des champs viennent d'être modifiés à l'écran. C'est ce qui permet de
+ * copier une entrée vers un autre répertoire en un seul geste : choisir la
+ * destination, puis « Dupliquer ».
+ *
+ * La copie s'ouvre aussitôt, pour qu'on la retouche pendant qu'on y pense, et
+ * pour qu'aucun doute ne subsiste sur ce qui vient d'être créé.
+ */
+async function dupliquerEntree() {
+  if (!editing) return;
+
+  const cible = groupByUuid($('d-group').value) || db.getDefaultGroup();
+  const titre = $('d-title').value.trim();
+  const copie = db.createEntry(cible);
+  // Les champs personnalisés ne sont pas dans le formulaire : ils sont
+  // recopiés depuis l'originale, sinon la copie en perdrait la trace.
+  for (const { key, value } of customFields(editing)) copie.fields.set(key, value);
+  ecrireChamps(copie, titre ? titre + ' (copie)' : '(copie)');
 
   await persist();
-  closeDetail();
   renderGroups();
   renderEntries();
+  openDetail(copie, cible);
 }
 
 /**
@@ -1127,6 +1169,7 @@ async function majRappelExport() {
 $('form-detail').addEventListener('submit', saveDetail);
 $('btn-detail-close').addEventListener('click', closeDetail);
 $('btn-delete').addEventListener('click', deleteEntry);
+$('btn-duplicate').addEventListener('click', dupliquerEntree);
 $('btn-reveal').addEventListener('click', () => setReveal($('d-password').type === 'password'));
 $('d-password').addEventListener('input', updateStrength);
 
