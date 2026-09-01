@@ -234,6 +234,19 @@ async function persist() {
 let syncing = false;
 let syncQueued = false;
 
+/**
+ * Garde la dernière erreur de synchronisation à portée de main.
+ *
+ * Le bandeau ne peut afficher qu'une ligne, et la console peut être filtrée ou
+ * vidée au rechargement — deux raisons pour lesquelles un échec ne laissait
+ * aucune trace exploitable. L'objet complet reste donc accessible en tapant
+ * `mysaferErreurSync` dans la console, avec sa pile d'appel.
+ */
+function retenirErreurSync(err) {
+  window.mysaferErreurSync = err;
+  console.error('[MySafer] échec de synchronisation', err);
+}
+
 function setSyncStatus(msg, kind = '') {
   // L'afficheur ne s'éteint jamais : un appareil sans état affiché ressemble à
   // un appareil en panne. Sans message, il retombe sur « Prêt ».
@@ -267,10 +280,7 @@ async function syncInBackground() {
       $('sync-conflict').hidden = false;
       setSyncStatus('Synchronisation suspendue', 'warn');
     } else {
-      // Consigner l'objet complet : le message affiché est court par nécessité,
-      // et sans cette trace un échec de synchronisation ne laisse rien à
-      // examiner — ni code, ni pile, ni cause.
-      console.error('[MySafer] échec de synchronisation', err);
+      retenirErreurSync(err);
       setSyncStatus(syncErrorMessage(err), 'warn');
     }
   } finally {
@@ -313,6 +323,7 @@ $('btn-conflict-push').addEventListener('click', async () => {
     $('sync-conflict').hidden = true;
     setSyncStatus('Synchronisé', 'ok');
   } catch (err) {
+    retenirErreurSync(err);
     setSyncStatus(syncErrorMessage(err), 'warn');
   }
 });
