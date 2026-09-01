@@ -21,7 +21,7 @@ import { rendreReordonnable, rendreReordonnableAuClavier } from './dragOrder.js'
 import { signIn, signOutUser, onAuthChange, authState } from './firebaseAuth.js';
 import {
   syncNow, downloadRemoteVault, adoptRemoteVault, canSync, syncErrorMessage,
-  remplacerDistant, ConflitCoffre, CoffreDistantIllisible,
+  remplacerDistant, ConflitCoffre,
 } from './syncController.js';
 import {
   biometrieDisponible, estEnrole, enroler, deverrouiller as deverrouillerBio,
@@ -40,6 +40,12 @@ const $ = (id) => document.getElementById(id);
 // Séparateur de paragraphe des fenêtres de confirmation, nommé pour que les
 // longs textes de confirmation restent lisibles à la lecture du code.
 const NL2 = '\n\n';
+
+// Version du code réellement exécuté, affichée dans les réglages. Une
+// journée de diagnostic s'est perdue à ne pas pouvoir répondre à « quelle
+// version tourne ? » : le cache du navigateur et le service worker peuvent
+// servir des modules d'âges différents, et rien ne le disait.
+const VERSION = '2026-09-01.6';
 
 // ---------------------------------------------------------------------------
 // État
@@ -261,7 +267,12 @@ function retenirErreurSync(err) {
   // La réparation n'est offerte que pour la panne qu'elle répare. Proposer
   // d'écraser la copie en ligne devant une coupure réseau serait une invitation
   // à détruire ce qui n'a rien de cassé.
-  $('sync-fail-repair').hidden = !(err instanceof CoffreDistantIllisible);
+  //
+  // Le test porte sur le nom et non sur `instanceof` : deux versions d'un
+  // même module servies par le cache produisent deux classes distinctes, et
+  // l'identité échoue là où le nom tient. Une panne diagnostiquée ne doit
+  // pas redevenir invisible pour cette raison.
+  $('sync-fail-repair').hidden = !(err && err.name === 'CoffreDistantIllisible');
 
   $('sync-fail-when').textContent = 'Le ' + new Date().toLocaleString('fr-FR') + '.';
   $('sync-fail-detail').textContent = lignes.join('\n');
@@ -837,6 +848,8 @@ const optionsGroupes = {
 rendreReordonnable(optionsEntrees);
 rendreReordonnableAuClavier(optionsEntrees);
 rendreReordonnable(optionsGroupes);
+
+$('version').textContent = VERSION;
 rendreReordonnableAuClavier(optionsGroupes);
 
 // ---------------------------------------------------------------------------
