@@ -47,7 +47,7 @@ const NL2 = '\n\n';
 // journée de diagnostic s'est perdue à ne pas pouvoir répondre à « quelle
 // version tourne ? » : le cache du navigateur et le service worker peuvent
 // servir des modules d'âges différents, et rien ne le disait.
-const VERSION = '2026-09-01.12';
+const VERSION = '2026-09-01.13';
 
 // ---------------------------------------------------------------------------
 // État
@@ -462,6 +462,12 @@ function retenirErreurSync(err) {
     || (codeIncident(err) === 'SYNC-FUSION-DOUBLON' && localSain));
   $('sync-fail-repair').hidden = !reparable;
 
+  // Le défaut est ici, et aucune manipulation locale ne le répare : la
+  // seule issue est de reprendre le coffre en ligne. Indépendant de
+  // l'erreur affichée — un doublon local bloque la fusion quoi qu'il
+  // arrive.
+  $('sync-fail-repair-local').hidden = localSain;
+
   // Le casier reste replié — sauf quand il attend un geste. Une réparation
   // possible cachée derrière un chevron serait une réparation jamais faite.
   $('sync-fail-box').open = reparable;
@@ -540,6 +546,46 @@ $('btn-conflict-pull').addEventListener('click', () => {
   $('sync-conflict').hidden = true;
   lockVault('conflit');
   refreshLockScreen();
+});
+
+// Reprendre le coffre en ligne, quand c'est celui de l'appareil qui est en
+// cause. On ne l'installe pas ici : les octets sont mis en attente et
+// l'écran de déverrouillage sert de vérification, comme pour l'import d'un
+// fichier. Rien n'est écrasé tant que la phrase n'a pas été acceptée.
+$('btn-replace-local').addEventListener('click', async () => {
+  setSyncStatus('Récupération…', 'busy');
+  let octets;
+  try {
+    octets = await downloadRemoteVault();
+  } catch (err) {
+    retenirErreurSync(err);
+    setSyncStatus(syncErrorMessage(err), 'warn');
+    return;
+  }
+  if (!octets) {
+    setSyncStatus('Aucun coffre en ligne pour ce compte.', 'warn');
+    return;
+  }
+
+  if (!confirm(
+    'Remplacer le coffre de cet appareil par celui en ligne ?'
+    + NL2
+    + "Le coffre de cet appareil contient un identifiant en double : il "
+    + 'bloque toute fusion et ne peut pas se réparer sur place.'
+    + NL2
+    + "Ce qui n'existe QUE sur cet appareil sera perdu. Vérifiez d'abord "
+    + "que la copie en ligne est à jour, et exportez avant si vous avez un "
+    + 'doute.'
+    + NL2
+    + 'La phrase de passe vous sera redemandée pour installer le coffre.')) {
+    setSyncStatus('');
+    return;
+  }
+
+  octetsAInstaller = octets;
+  origineAInstaller = 'ligne';
+  lockVault('reprise');
+  await refreshLockScreen();
 });
 
 $('btn-replace-remote').addEventListener('click', async () => {

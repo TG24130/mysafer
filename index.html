@@ -323,6 +323,24 @@
           </p>
         </div>
 
+        <!-- Le geste symétrique. Il n'apparaît que si le défaut est ici : un
+             identifiant en double dans le coffre de cet appareil bloque toute
+             fusion, et aucune manipulation locale ne le répare. -->
+        <div id="sync-fail-repair-local" hidden>
+          <p class="note note-alert">
+            Le coffre de cet appareil contient un identifiant en double. C'est
+            lui qui empêche la fusion, et il ne peut pas se réparer sur place.
+          </p>
+          <button type="button" id="btn-replace-local" class="key key-danger key-block">
+            Reprendre le coffre en ligne
+          </button>
+          <p class="note">
+            Le coffre de cet appareil sera remplacé par celui en ligne. Vérifiez
+            d'abord que la copie en ligne est à jour — sur l'appareil sain, le
+            compte d'entrées doit être le bon. Exportez avant, par précaution.
+          </p>
+        </div>
+
         <p class="note">
           Votre coffre est intact sur cet appareil : un échec de synchronisation
           n'est jamais un échec d'enregistrement.
