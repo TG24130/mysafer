@@ -291,6 +291,19 @@
         <p id="bio-error" class="note note-alert" role="alert" hidden></p>
       </section>
 
+      <!-- Visible seulement après un échec. Le bandeau d'état ne tient qu'une
+           ligne, et exiger la console du navigateur pour connaître la cause
+           d'une panne revient à ne rien dire à qui ne l'ouvre pas. -->
+      <section id="sync-fail-box" class="rack" hidden>
+        <h3 class="rack-title">Dernier échec de synchronisation</h3>
+        <p id="sync-fail-when" class="readout"></p>
+        <pre id="sync-fail-detail" class="trace"></pre>
+        <p class="note">
+          Votre coffre est intact sur cet appareil : un échec de synchronisation
+          n'est jamais un échec d'enregistrement.
+        </p>
+      </section>
+
       <section class="rack">
         <h3 class="rack-title">Appareil</h3>
         <p class="note">

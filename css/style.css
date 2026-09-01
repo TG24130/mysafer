@@ -535,6 +535,26 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
 
 .sync-warn { color: #E8897C; }
 
+/* Trace d'erreur : destinée à être lue puis recopiée, donc sélectionnable et
+   jamais tronquée. Elle déborde en hauteur plutôt qu'en largeur. */
+.trace {
+  margin: 0 0 var(--gap);
+  padding: calc(var(--u) * 2) calc(var(--u) * 3);
+  max-height: 40vh;
+  overflow: auto;
+  background: #0E1113;
+  border-radius: var(--radius);
+  box-shadow: inset 0 2px 0 #000;
+  color: var(--live);
+  font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono",
+    "Roboto Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
 .layout { flex: 1 1 auto; min-height: 0; }
 
 /* Une vue à la fois sur téléphone : la barre de modes en bas commande. */

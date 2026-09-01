@@ -245,6 +245,18 @@ let syncQueued = false;
 function retenirErreurSync(err) {
   window.mysaferErreurSync = err;
   console.error('[MySafer] échec de synchronisation', err);
+
+  // Et dans l'interface, parce que la console n'est pas un outil qu'on peut
+  // demander à quelqu'un d'ouvrir pour comprendre une panne.
+  const lignes = [];
+  if (err && err.code !== undefined) lignes.push('code : ' + err.code);
+  if (err && err.name) lignes.push('type : ' + err.name);
+  lignes.push('message : ' + ((err && err.message) || String(err)));
+  if (err && err.stack) lignes.push('', err.stack);
+
+  $('sync-fail-when').textContent = 'Le ' + new Date().toLocaleString('fr-FR') + '.';
+  $('sync-fail-detail').textContent = lignes.join('\n');
+  $('sync-fail-box').hidden = false;
 }
 
 function setSyncStatus(msg, kind = '') {
