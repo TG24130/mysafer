@@ -267,6 +267,10 @@ async function syncInBackground() {
       $('sync-conflict').hidden = false;
       setSyncStatus('Synchronisation suspendue', 'warn');
     } else {
+      // Consigner l'objet complet : le message affiché est court par nécessité,
+      // et sans cette trace un échec de synchronisation ne laisse rien à
+      // examiner — ni code, ni pile, ni cause.
+      console.error('[MySafer] échec de synchronisation', err);
       setSyncStatus(syncErrorMessage(err), 'warn');
     }
   } finally {

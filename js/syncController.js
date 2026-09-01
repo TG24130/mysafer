@@ -180,5 +180,13 @@ export function syncErrorMessage(err) {
   }
   if (isDenied(err)) return 'Accès refusé par le serveur. Reconnecte-toi.';
   if (err && /aucun compte connecté/i.test(err.message)) return 'Non connecté — synchronisation en pause.';
-  return 'Synchronisation impossible pour le moment.';
+
+  // Repli. Il servait jusqu'ici un message qui ne disait rien, et l'erreur
+  // n'était consignée nulle part : devant un échec, il n'y avait littéralement
+  // rien à regarder. On y joint donc ce qui identifie la panne — le code
+  // Firebase quand il y en a un, le message sinon.
+  const detail = (err && (err.code || err.message)) || '';
+  return detail
+    ? 'Synchronisation impossible : ' + detail
+    : 'Synchronisation impossible pour le moment.';
 }
