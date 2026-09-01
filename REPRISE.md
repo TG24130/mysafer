@@ -19,6 +19,11 @@ renommé le 2026-08-28, quand le produit a pris le nom MySafer.
 python tools/serve.py 5175
 ```
 
+La version exécutée est dans `VERSION` en tête de `js/app.js`, affichée en bas
+des réglages. **L'incrémenter à chaque déploiement**, en même temps que
+`CACHE_NAME` dans `sw.js` : c'est ce qui permet de répondre à « quelle version
+tourne ? » sans ouvrir la console.
+
 **Ne pas revenir à `python -m http.server`** : il laisse le navigateur mettre
 les fichiers en cache et fait tester du code périmé. Le cache a masqué l'état
 réel du code trois fois en une journée.
@@ -54,7 +59,18 @@ balayage, réordonnancement au doigt, adresse postale dans la fiche, icône,
 bouton « Trier » qui réécrit l'ordre alphabétique une bonne fois, duplication
 d'entrée vers le répertoire choisi, import d'un `.kdbx` (l'export n'avait pas
 de symétrique : la sauvegarde n'était restaurable que dans KeePassXC), mode
-d'emploi imprimable dans `docs/`.
+d'emploi imprimable dans `docs/`, points de contrôle et codes d'incident dans
+les réglages, banc d'essai `verification.html`, deux boutons de réparation
+selon le côté défectueux.
+
+Retouches d'interface : la racine ne figure plus dans la liste des répertoires
+(elle doublait « Tout »), le nom du produit garde sa casse, le jour et la date
+s'affichent dans le bandeau d'état, et les deux blocs de diagnostic sont des
+tiroirs repliés.
+
+**État au 2026-09-01 au soir** : PC et iPhone sur le même coffre, 89 entrées,
+12 répertoires, aucun identifiant en double des deux côtés. Version déployée
+`2026-09-01.14`.
 
 ---
 
