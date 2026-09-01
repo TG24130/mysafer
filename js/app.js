@@ -47,7 +47,7 @@ const NL2 = '\n\n';
 // journée de diagnostic s'est perdue à ne pas pouvoir répondre à « quelle
 // version tourne ? » : le cache du navigateur et le service worker peuvent
 // servir des modules d'âges différents, et rien ne le disait.
-const VERSION = '2026-09-01.9';
+const VERSION = '2026-09-01.10';
 
 // ---------------------------------------------------------------------------
 // État
@@ -408,7 +408,22 @@ function retenirErreurSync(err) {
   // même module servies par le cache produisent deux classes distinctes, et
   // l'identité échoue là où le nom tient. Une panne diagnostiquée ne doit
   // pas redevenir invisible pour cette raison.
-  $('sync-fail-repair').hidden = !(err && err.name === 'CoffreDistantIllisible');
+  //
+  // Deux pannes appellent la même réparation, et une seule condition les
+  // sépare de toutes les autres : la copie en ligne est inutilisable, et
+  // celle de l'appareil ne l'est pas.
+  //
+  //   - le fichier distant ne s'ouvre pas (corrompu, ou autre phrase) ;
+  //   - il s'ouvre mais refuse de fusionner, un identifiant y désignant
+  //     deux objets — et alors seulement si le coffre local, lui, est sain.
+  //
+  // Sans cette seconde condition, on proposerait d'envoyer un coffre local
+  // défectueux par-dessus le seul autre exemplaire.
+  const localSain = db ? uuidsEnDouble(db).length === 0 : false;
+  const reparable = Boolean(err) && (
+    err.name === 'CoffreDistantIllisible'
+    || (codeIncident(err) === 'SYNC-FUSION-DOUBLON' && localSain));
+  $('sync-fail-repair').hidden = !reparable;
 
   $('sync-fail-when').textContent = 'Le ' + new Date().toLocaleString('fr-FR') + '.';
   $('sync-fail-detail').textContent = lignes.join('\n');
@@ -484,9 +499,9 @@ $('btn-replace-remote').addEventListener('click', async () => {
   if (!confirm(
     'Remplacer le coffre en ligne par celui de cet appareil ?'
     + NL2
-    + "La copie en ligne ne s'ouvre pas : elle est corrompue ou chiffrée avec "
-    + 'une autre phrase. Elle sera écrasée par le coffre de cet appareil, qui '
-    + "lui s'ouvre normalement."
+    + "La copie en ligne est inutilisable : corrompue, chiffrée avec une autre "
+    + 'phrase, ou porteuse de deux objets de même identifiant. Elle sera '
+    + "écrasée par le coffre de cet appareil, qui lui est sain."
     + NL2
     + "Avant l'écrasement, une copie datée de ce qui est en ligne est déposée "
     + "dans l'historique. Rien ne disparaît définitivement.")) return;
