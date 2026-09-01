@@ -47,7 +47,7 @@ const NL2 = '\n\n';
 // journée de diagnostic s'est perdue à ne pas pouvoir répondre à « quelle
 // version tourne ? » : le cache du navigateur et le service worker peuvent
 // servir des modules d'âges différents, et rien ne le disait.
-const VERSION = '2026-09-01.10';
+const VERSION = '2026-09-01.11';
 
 // ---------------------------------------------------------------------------
 // État
@@ -424,6 +424,12 @@ function retenirErreurSync(err) {
     err.name === 'CoffreDistantIllisible'
     || (codeIncident(err) === 'SYNC-FUSION-DOUBLON' && localSain));
   $('sync-fail-repair').hidden = !reparable;
+
+  // Le casier reste replié — sauf quand il attend un geste. Une réparation
+  // possible cachée derrière un chevron serait une réparation jamais faite.
+  $('sync-fail-box').open = reparable;
+  // Le code reste lisible casier fermé : c'est ce qu'on vient chercher.
+  $('sync-fail-code').textContent = ' · ' + codeIncident(err);
 
   $('sync-fail-when').textContent = 'Le ' + new Date().toLocaleString('fr-FR') + '.';
   $('sync-fail-detail').textContent = lignes.join('\n');
@@ -1350,6 +1356,7 @@ $('btn-copier-diag').addEventListener('click', async (e) => {
     $('sync-fail-detail').textContent = texte;
     $('sync-fail-repair').hidden = true;
     $('sync-fail-box').hidden = false;
+    $('sync-fail-box').open = true;
     flash(e.currentTarget, 'Affiché ci-dessus');
   }
 });

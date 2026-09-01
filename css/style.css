@@ -801,6 +801,63 @@ input:focus-visible, textarea:focus-visible, .select:focus-visible {
 
 .rack:last-child { border-bottom: 0; }
 
+/* Casier repliable. Le détail d'un incident et la planche d'état sont utiles
+   quand on les cherche, encombrants le reste du temps : ils se replient, et
+   leur titre suffit à savoir qu'ils sont là. */
+.rack-pliable > summary {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 2);
+  cursor: pointer;
+  list-style: none;
+  /* Le titre porte la marge du casier ouvert ; replié, il ne la garde pas. */
+  margin-bottom: 0;
+}
+
+.rack-pliable[open] > summary { margin-bottom: calc(var(--u) * 3); }
+
+.rack-pliable > summary::-webkit-details-marker { display: none; }
+
+/* Chevron gravé, à droite : l'indicateur d'un tiroir, pas une décoration. Il
+   pivote au lieu de changer de forme — un seul objet, deux positions.
+
+   La rotation passe par une variable héritée plutôt que par une règle visant
+   directement `[open] ::after` : Chromium ne recalcule pas le style d'un
+   pseudo-élément quand seul l'attribut `open` du parent change, et le chevron
+   restait figé. Une propriété personnalisée, elle, propage le changement. */
+.rack-pliable { --chevron: rotate(-45deg) translate(-2px, -2px); }
+.rack-pliable[open] { --chevron: rotate(45deg) translate(-1px, -1px); }
+
+.rack-pliable > summary::after {
+  content: '';
+  flex: 0 0 auto;
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--ink-on-chassis-dim);
+  border-bottom: 2px solid var(--ink-on-chassis-dim);
+  transform: var(--chevron);
+  transition: transform 120ms ease;
+}
+
+.rack-pliable > summary:hover::after { border-color: var(--ink-on-chassis); }
+
+.rack-pliable > summary:focus-visible {
+  outline: 2px solid var(--live);
+  outline-offset: 3px;
+}
+
+/* Le code d'incident reste lisible casier fermé : c'est l'information qu'on
+   vient chercher, et la déplier pour l'obtenir serait une étape de trop. */
+.sommaire-note {
+  font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono",
+    "Roboto Mono", Menlo, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: var(--live);
+  text-transform: none;
+}
+
 .rack-title {
   margin: 0 0 calc(var(--u) * 3);
   font-size: 11px;
