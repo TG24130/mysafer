@@ -223,6 +223,10 @@
         </div>
       </div>
 
+      <!-- Un enregistrement local en échec reste affiché jusqu'à la prochaine
+           écriture réussie : c'est la seule panne qui fait perdre des données
+           sans que rien d'autre ne le montre. -->
+      <p id="save-alert" class="note note-alert" role="alert" hidden></p>
       <p id="clip-status" class="note note-live" role="status" hidden></p>
       <p id="scope-label" class="scope-label"></p>
       <ul id="entry-list" class="entry-list"></ul>
@@ -319,6 +323,21 @@
         <p class="note">
           Votre coffre est intact sur cet appareil : un échec de synchronisation
           n'est jamais un échec d'enregistrement.
+        </p>
+      </section>
+
+      <!-- Points de contrôle. Tout ce qu'il faut savoir avant de chercher une
+           panne, au même endroit, sans ouvrir les outils du navigateur. -->
+      <section class="rack">
+        <h3 class="rack-title">État et diagnostic</h3>
+        <dl id="etat-liste" class="etat"></dl>
+        <button type="button" id="btn-copier-diag" class="key key-block">
+          Copier le rapport de diagnostic
+        </button>
+        <p class="note">
+          Le rapport ne contient ni mot de passe, ni titre d'entrée, ni contenu
+          du coffre — seulement des dates, des compteurs et le dernier code
+          d'incident.
         </p>
       </section>
 

@@ -140,6 +140,30 @@ export function saveVault(db) {
   return db.save();
 }
 
+// Signature d'un fichier KDBX : deux entiers 32 bits en tête. La vérifier est
+// quasi gratuit et attrape ce qu'aucune autre garde ne voit — un tampon vide,
+// tronqué, ou qui n'est pas un coffre. Un coffre en ligne corrompu a été écrit
+// sans que rien ne s'en aperçoive le 2026-09-01 ; c'est la parade.
+const KDBX_SIGNATURE = [0x9AA2D903, 0xB54BFB67];
+
+// Un coffre vide sérialisé pèse déjà plus de 200 octets. En dessous, le tampon
+// est tronqué, quelle que soit son en-tête.
+const TAILLE_MINIMALE = 200;
+
+/**
+ * Le tampon a-t-il l'apparence d'un fichier KDBX complet ?
+ *
+ * Ne dit rien du contenu — seule l'ouverture le prouve, et elle coûte une
+ * dérivation Argon2. Ce contrôle-ci sert à ne jamais écrire ni envoyer un
+ * tampon manifestement inexploitable.
+ */
+export function ressembleAKdbx(bytes) {
+  if (!bytes || bytes.byteLength < TAILLE_MINIMALE) return false;
+  const vue = new DataView(bytes);
+  return vue.getUint32(0, true) === KDBX_SIGNATURE[0]
+    && vue.getUint32(4, true) === KDBX_SIGNATURE[1];
+}
+
 /** True si l'erreur correspond à un mot de passe maître incorrect. */
 export function isWrongPassword(err) {
   return err instanceof kdbxweb.KdbxError

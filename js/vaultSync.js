@@ -16,6 +16,7 @@ import {
   getBlob,
 } from './vendor/firebase/firebase-storage.js';
 import { firebaseApp } from './firebaseInit.js';
+import { ressembleAKdbx } from './vaultCrypto.js';
 import { currentUid } from './firebaseAuth.js';
 
 const storage = getStorage(firebaseApp);
@@ -96,8 +97,20 @@ export function createVaultTransport(uid = currentUid()) {
       }
     },
 
-    /** @param {ArrayBuffer} bytes coffre chiffré, prêt à stocker. */
+    /**
+     * @param {ArrayBuffer} bytes coffre chiffré, prêt à stocker.
+     * @throws {Error} si le tampon n'a pas l'apparence d'un KDBX complet.
+     *
+     * Garde placée ici, au plus près de l'écriture, pour couvrir tous les
+     * appelants d'un coup. La copie en ligne corrompue du 2026-09-01 est
+     * passée sans que rien ne la retienne, et a bloqué toute synchronisation
+     * jusqu'à intervention manuelle : un envoi refusé se réessaie, un fichier
+     * distant illisible immobilise le coffre.
+     */
     async upload(bytes) {
+      if (!ressembleAKdbx(bytes)) {
+        throw new Error('Refus d’envoyer un coffre invalide (tampon vide, tronqué ou non KDBX).');
+      }
       await uploadBytes(ref(storage, chemin), bytes, {
         contentType: 'application/octet-stream',
         // Repère lisible dans la console Firebase, sans rien révéler du contenu.

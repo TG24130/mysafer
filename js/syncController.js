@@ -173,6 +173,34 @@ export function lastSyncAt() {
  * Le coffre local n'étant jamais mis en péril par un échec de synchro, ces
  * messages informent sans alarmer.
  */
+/**
+ * Code court et stable désignant une panne, à citer dans un signalement.
+ *
+ * Le message affiché change avec la rédaction ; ce code, non. Il dit d'un seul
+ * mot où chercher, ce qui a manqué le 2026-09-01 : deux heures ont été perdues
+ * à distinguer une panne réseau d'un fichier distant corrompu, faute d'un
+ * repère que l'utilisateur puisse simplement lire et transmettre.
+ */
+export function codeIncident(err) {
+  if (!err) return 'SYNC-OK';
+  if (err.name === 'CoffreDistantIllisible') {
+    // La cause distingue les deux seules issues : réparer, ou fusionner.
+    const cause = err.cause && err.cause.message ? err.cause.message : '';
+    if (/gzip|corrupt|inflate/i.test(cause)) return 'SYNC-DISTANT-CORROMPU';
+    if (/key|password|clé/i.test(cause)) return 'SYNC-DISTANT-AUTRE-PHRASE';
+    return 'SYNC-DISTANT-ILLISIBLE';
+  }
+  if (err.name === 'ConflitCoffre') return 'SYNC-DEUX-COFFRES';
+  if (isOffline(err)) return 'RESEAU-ABSENT';
+  if (isBlocked(err)) return 'CORS-NON-AUTORISE';
+  if (isDenied(err)) return 'ACCES-REFUSE';
+  if (/aucun compte connecté/i.test(err.message || '')) return 'NON-CONNECTE';
+  if (/Refus d’envoyer|Refus d’écrire/.test(err.message || '')) return 'COFFRE-INVALIDE';
+  if (/Argon2|Worker/i.test(err.message || '')) return 'ARGON2';
+  if (err.name === 'QuotaExceededError' || /quota/i.test(err.message || '')) return 'STOCKAGE-PLEIN';
+  return 'INCONNU';
+}
+
 export function syncErrorMessage(err) {
   if (isOffline(err)) return 'Pas de réseau — le coffre reste utilisable hors ligne.';
   if (isBlocked(err)) {

@@ -167,6 +167,38 @@ Un test qui s'exécute d'un trait fait tout tomber dans la même seconde : les
 temps sont à égalité, la fusion ne peut pas trancher, et la divergence paraît
 permanente. Les tests datent donc tout explicitement.
 
+### Devant une panne, lire les points de contrôle avant de chercher
+
+Réglages ▸ **État et diagnostic** donne en une fois : version exécutée, coffre
+ouvert ou non, nombre d'entrées, taille du fichier, dernier enregistrement
+local, dernière synchronisation, dernier export, compte, réseau, service
+worker, et le **code du dernier incident**. Un bouton copie le tout — sans
+aucun titre d'entrée ni mot de passe.
+
+Les codes viennent de `codeIncident()` dans `syncController.js` :
+`SYNC-DISTANT-CORROMPU`, `SYNC-DISTANT-AUTRE-PHRASE`, `SYNC-DEUX-COFFRES`,
+`RESEAU-ABSENT`, `CORS-NON-AUTORISE`, `ACCES-REFUSE`, `NON-CONNECTE`,
+`COFFRE-INVALIDE`, `ARGON2`, `STOCKAGE-PLEIN`, `INCONNU`.
+
+Le 2026-09-01, deux heures se sont perdues à établir des faits que
+l'application connaissait déjà : quelle version tournait, depuis quand la
+synchronisation échouait, et laquelle des pannes était en cours. Commencer par
+ce panneau, pas par la console du navigateur.
+
+### Une écriture refusée plutôt qu'un coffre invalide
+
+`saveVaultBytes()` et `upload()` vérifient la signature KDBX et une taille
+plancher avant d'écrire. Un tampon vide ou tronqué est refusé, localement comme
+en ligne. La copie en ligne corrompue du 2026-09-01 est passée sans que rien ne
+la retienne, et a immobilisé toute synchronisation jusqu'à intervention
+manuelle — un envoi refusé se réessaie, un fichier distant illisible non.
+
+Un échec d'enregistrement **local** s'affiche dans son propre bandeau, au-dessus
+de la liste, et y reste jusqu'à la prochaine écriture réussie. Il ne passe pas
+par l'afficheur d'état, qu'un message de synchronisation efface la seconde
+d'après : croire avoir enregistré est la seule panne qui fasse perdre des
+données sans que rien ne le montre.
+
 ### Un fichier n'est installé qu'une fois sa phrase acceptée
 
 L'import de `.kdbx` ne réécrit rien lui-même : il pose les octets dans

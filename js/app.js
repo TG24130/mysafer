@@ -21,7 +21,7 @@ import { rendreReordonnable, rendreReordonnableAuClavier } from './dragOrder.js'
 import { signIn, signOutUser, onAuthChange, authState } from './firebaseAuth.js';
 import {
   syncNow, downloadRemoteVault, adoptRemoteVault, canSync, syncErrorMessage,
-  remplacerDistant, ConflitCoffre,
+  remplacerDistant, ConflitCoffre, codeIncident, lastSyncAt,
 } from './syncController.js';
 import {
   biometrieDisponible, estEnrole, enroler, deverrouiller as deverrouillerBio,
@@ -45,7 +45,7 @@ const NL2 = '\n\n';
 // journée de diagnostic s'est perdue à ne pas pouvoir répondre à « quelle
 // version tourne ? » : le cache du navigateur et le service worker peuvent
 // servir des modules d'âges différents, et rien ne le disait.
-const VERSION = '2026-09-01.6';
+const VERSION = '2026-09-01.7';
 
 // ---------------------------------------------------------------------------
 // État
@@ -97,6 +97,7 @@ function showVault() {
   armLock();
   majRappelExport();
   majBiometrie();
+  majEtat();
 }
 
 /**
@@ -227,11 +228,125 @@ onStateChange((s) => {
 
 async function persist() {
   const bytes = await saveVault(db);
-  await saveVaultBytes(bytes);
+  try {
+    await saveVaultBytes(bytes);
+  } catch (err) {
+    // Un enregistrement local qui échoue est la panne la plus grave de
+    // toutes : l'utilisateur croit avoir écrit, continue à saisir, et tout
+    // disparaît au verrouillage. Il ne doit donc pas se signaler dans le
+    // bandeau d'état, qu'un message de synchronisation efface la seconde
+    // d'après, mais dans un bandeau qui reste jusqu'à la prochaine
+    // écriture réussie.
+    retenirErreurSync(err);
+    alerteEcritureLocale(err);
+    throw err;
+  }
+  await setMeta(META.LAST_SAVE, Date.now());
+  alerteEcritureLocale(null);
   // La synchronisation part en arrière-plan et n'est jamais attendue : le
   // coffre local est déjà enregistré à cette ligne, l'enregistrement ne doit
   // pas dépendre du réseau.
   syncInBackground();
+}
+
+
+// ---------------------------------------------------------------------------
+// Points de contrôle
+// ---------------------------------------------------------------------------
+//
+// Ce que la panne du 2026-09-01 a coûté : deux heures à établir des faits que
+// l'application connaissait déjà — quelle version s'exécute, quand le coffre
+// a été écrit pour la dernière fois, depuis quand la synchronisation échoue,
+// et laquelle des pannes possibles était en cours. Tout est désormais lisible
+// dans les réglages, et copiable d'un geste.
+
+// Dernier incident retenu, pour le rapport. Null tant que rien n'a échoué.
+let dernierIncident = null;
+
+/**
+ * Signale un enregistrement local en échec, et l'y laisse.
+ *
+ * Distinct du bandeau d'état, qu'un message de synchronisation écrase en une
+ * seconde. Ce bandeau-ci ne disparaît qu'à la prochaine écriture réussie.
+ */
+function alerteEcritureLocale(err) {
+  const el = $('save-alert');
+  if (!el) return;
+  if (!err) { el.hidden = true; el.textContent = ''; return; }
+  el.textContent = 'ENREGISTREMENT IMPOSSIBLE (' + codeIncident(err) + '). Vos dernières modifications ne sont pas écrites sur cet appareil et seront perdues au verrouillage. Exportez le coffre maintenant.';
+  el.hidden = false;
+}
+
+const JOUR_MS = 86400000;
+
+function depuisQuand(horodatage) {
+  if (!horodatage) return 'jamais';
+  const jours = Math.floor((Date.now() - horodatage) / JOUR_MS);
+  const quand = new Date(horodatage).toLocaleString('fr-FR');
+  if (jours === 0) return quand + ' (aujourd’hui)';
+  return quand + ' (il y a ' + jours + ' jour' + (jours > 1 ? 's' : '') + ')';
+}
+
+/** Les faits, sous forme de paires étiquette / valeur. */
+async function releverEtat() {
+  const octets = await loadVaultBytes().catch(() => null);
+  const groupes = db ? flattenGroups(db) : [];
+  const sw = navigator.serviceWorker
+    ? (navigator.serviceWorker.controller ? 'actif' : 'inactif')
+    : 'non géré';
+
+  const [derniereEcriture, derniereSync, dernierExport] = await Promise.all([
+    getMeta(META.LAST_SAVE), lastSyncAt(), getMeta(META.LAST_EXPORT),
+  ]);
+
+  const lignes = [
+    ['Version', VERSION, false],
+    ['Coffre ouvert', db ? 'oui' : 'non', false],
+    ['Entrées', db ? String(allEntries(db).length) : '—', false],
+    ['Répertoires', db ? String(groupes.length) : '—', false],
+    ['Taille du fichier', octets ? Math.round(octets.byteLength / 1024) + ' Ko' : '—', false],
+    ['Dernier enregistrement', depuisQuand(derniereEcriture), !derniereEcriture],
+    ['Dernière synchronisation', depuisQuand(derniereSync),
+      !derniereSync || (Date.now() - derniereSync) > 7 * JOUR_MS],
+    ['Dernier export', depuisQuand(dernierExport),
+      !dernierExport || (Date.now() - dernierExport) > 30 * JOUR_MS],
+    ['Compte', authState.currentUser ? authState.currentUser.email : 'non connecté', false],
+    ['Réseau', navigator.onLine === false ? 'hors ligne' : 'en ligne', navigator.onLine === false],
+    ['Service worker', sw, sw !== 'actif'],
+    ['Dernier incident',
+      dernierIncident ? dernierIncident.code + ' — ' + depuisQuand(dernierIncident.quand) : 'aucun',
+      Boolean(dernierIncident)],
+  ];
+  return lignes;
+}
+
+async function majEtat() {
+  const liste = $('etat-liste');
+  if (!liste) return;
+  liste.textContent = '';
+  for (const [etiquette, valeur, alerte] of await releverEtat()) {
+    const dt = document.createElement('dt');
+    dt.textContent = etiquette;
+    const dd = document.createElement('dd');
+    dd.textContent = valeur;
+    if (alerte) dd.className = 'is-alert';
+    liste.append(dt, dd);
+  }
+}
+
+/**
+ * Rapport copiable. Ne contient aucun titre d'entrée, aucun identifiant,
+ * aucun mot de passe — que des dates, des compteurs et un code d'incident.
+ */
+async function rapportDiagnostic() {
+  const lignes = await releverEtat();
+  const corps = lignes.map(([e, v]) => e + ' : ' + v).join('\n');
+  const trace = dernierIncident && dernierIncident.err && dernierIncident.err.stack
+    ? '\n\nTrace :\n' + dernierIncident.err.stack
+    : '';
+  return 'MySafer — rapport de diagnostic\n'
+    + 'Établi le ' + new Date().toLocaleString('fr-FR') + '\n\n'
+    + corps + trace;
 }
 
 // ---------------------------------------------------------------------------
@@ -254,11 +369,12 @@ let syncQueued = false;
  */
 function retenirErreurSync(err) {
   window.mysaferErreurSync = err;
+  dernierIncident = { code: codeIncident(err), err, quand: Date.now() };
   console.error('[MySafer] échec de synchronisation', err);
 
   // Et dans l'interface, parce que la console n'est pas un outil qu'on peut
   // demander à quelqu'un d'ouvrir pour comprendre une panne.
-  const lignes = [];
+  const lignes = ['incident : ' + codeIncident(err)];
   if (err && err.code !== undefined) lignes.push('code : ' + err.code);
   if (err && err.name) lignes.push('type : ' + err.name);
   lignes.push('message : ' + ((err && err.message) || String(err)));
@@ -301,6 +417,7 @@ async function syncInBackground() {
   try {
     await syncNow(db);
     setSyncStatus('Synchronisé', 'ok');
+    majEtat();
     // Le coffre a pu changer par la fusion : réafficher plutôt que laisser une
     // liste qui ne correspond plus au contenu réel.
     renderGroups();
@@ -1185,6 +1302,23 @@ $('btn-lock').addEventListener('click', () => lockVault('manuel'));
 
 // Export du .kdbx. Sert aussi de vérification : le fichier doit s'ouvrir dans
 // KeePassXC sans erreur.
+$('btn-copier-diag').addEventListener('click', async (e) => {
+  await majEtat();
+  const texte = await rapportDiagnostic();
+  try {
+    await navigator.clipboard.writeText(texte);
+    flash(e.currentTarget, 'Copié');
+  } catch {
+    // Presse-papiers refusé : le rapport doit rester récupérable, donc on
+    // l'affiche à la place plutôt que d'échouer sans recours.
+    $('sync-fail-when').textContent = 'Rapport de diagnostic';
+    $('sync-fail-detail').textContent = texte;
+    $('sync-fail-repair').hidden = true;
+    $('sync-fail-box').hidden = false;
+    flash(e.currentTarget, 'Affiché ci-dessus');
+  }
+});
+
 $('btn-export').addEventListener('click', async () => {
   const bytes = await saveVault(db);
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));

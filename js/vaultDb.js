@@ -10,6 +10,8 @@
 //
 // Modèle repris de webapp/js/filesDb.js (Gestion Loc SCI).
 
+import { ressembleAKdbx } from './vaultCrypto.js';
+
 const DB_NAME = 'coffre_db';
 const DB_VERSION = 1;
 const STORE_VAULT = 'vault';
@@ -53,8 +55,16 @@ export function loadVaultBytes() {
     .then((v) => v || null);
 }
 
-/** @param {ArrayBuffer} bytes */
+/**
+ * @param {ArrayBuffer} bytes
+ * @throws {Error} si le tampon n'a pas l'apparence d'un KDBX complet. Écraser
+ *         le seul exemplaire local par un tampon vide ou tronqué serait une
+ *         perte définitive, et rien d'autre ne l'empêchait.
+ */
 export function saveVaultBytes(bytes) {
+  if (!ressembleAKdbx(bytes)) {
+    throw new Error('Refus d’écrire un coffre local invalide (tampon vide, tronqué ou non KDBX).');
+  }
   return tx(STORE_VAULT, 'readwrite', (s) => s.put(bytes, VAULT_KEY));
 }
 
@@ -103,4 +113,7 @@ export const META = {
   CREDENTIAL_ID: 'credentialId',
   // Dernier export manuel, pour le rappel de sauvegarde (phase 6).
   LAST_EXPORT: 'lastExport',
+  // Dernier enregistrement local réussi. Sert au diagnostic : un coffre qui ne
+  // s'écrit plus doit se voir, et pas seulement au prochain déverrouillage.
+  LAST_SAVE: 'lastSave',
 };
