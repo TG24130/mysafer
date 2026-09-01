@@ -74,6 +74,28 @@ test('CORE_ASSETS n\'est pas vide', () => {
   assert.ok(coreAssets().length > 5);
 });
 
+// Le contrôle qui manquait le 2026-09-01 : `js/fileDAttente.js` a été ajouté
+// et importé par app.js sans entrer dans CORE_ASSETS. En ligne rien ne se
+// voyait ; hors ligne, le module aurait manqué et le déverrouillage aurait
+// échoué. Vérifier que les fichiers listés existent ne suffit pas — il faut
+// vérifier que tout ce qui est importé est listé.
+test('tout module importé par l’application est précaché', () => {
+  const listes = new Set(coreAssets());
+  const manquants = [];
+  const motif = /from\s+'(\.[^']+)'/g;
+
+  for (const fichier of coreAssets()) {
+    if (!fichier.endsWith('.js') || !existsSync(join(racine, fichier))) continue;
+    const source = readFileSync(join(racine, fichier), 'utf8');
+    const dossier = fichier.split('/').slice(0, -1).join('/');
+    for (const m of source.matchAll(motif)) {
+      const cible = new URL(m[1], 'file:///' + dossier + '/').pathname.slice(1);
+      if (!listes.has(cible)) manquants.push(fichier + ' importe ' + cible);
+    }
+  }
+  assert.deepEqual(manquants, [], manquants.join(' ; '));
+});
+
 console.log('\nJekyll');
 
 // La règle : soit aucun fichier ne porte de tiret bas initial, soit `.nojekyll`

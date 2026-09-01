@@ -47,7 +47,7 @@ const NL2 = '\n\n';
 // journée de diagnostic s'est perdue à ne pas pouvoir répondre à « quelle
 // version tourne ? » : le cache du navigateur et le service worker peuvent
 // servir des modules d'âges différents, et rien ne le disait.
-const VERSION = '2026-09-01.8';
+const VERSION = '2026-09-01.9';
 
 // ---------------------------------------------------------------------------
 // État
