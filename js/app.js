@@ -21,7 +21,7 @@ import { rendreReordonnable, rendreReordonnableAuClavier } from './dragOrder.js'
 import { signIn, signOutUser, onAuthChange, authState } from './firebaseAuth.js';
 import {
   syncNow, downloadRemoteVault, adoptRemoteVault, canSync, syncErrorMessage,
-  remplacerDistant, ConflitCoffre,
+  remplacerDistant, ConflitCoffre, CoffreDistantIllisible,
 } from './syncController.js';
 import {
   biometrieDisponible, estEnrole, enroler, deverrouiller as deverrouillerBio,
@@ -36,6 +36,10 @@ if (window.top !== window.self) {
 }
 
 const $ = (id) => document.getElementById(id);
+
+// Séparateur de paragraphe des fenêtres de confirmation, nommé pour que les
+// longs textes de confirmation restent lisibles à la lecture du code.
+const NL2 = '\n\n';
 
 // ---------------------------------------------------------------------------
 // État
@@ -254,6 +258,11 @@ function retenirErreurSync(err) {
   lignes.push('message : ' + ((err && err.message) || String(err)));
   if (err && err.stack) lignes.push('', err.stack);
 
+  // La réparation n'est offerte que pour la panne qu'elle répare. Proposer
+  // d'écraser la copie en ligne devant une coupure réseau serait une invitation
+  // à détruire ce qui n'a rien de cassé.
+  $('sync-fail-repair').hidden = !(err instanceof CoffreDistantIllisible);
+
   $('sync-fail-when').textContent = 'Le ' + new Date().toLocaleString('fr-FR') + '.';
   $('sync-fail-detail').textContent = lignes.join('\n');
   $('sync-fail-box').hidden = false;
@@ -321,6 +330,29 @@ $('btn-conflict-pull').addEventListener('click', () => {
   $('sync-conflict').hidden = true;
   lockVault('conflit');
   refreshLockScreen();
+});
+
+$('btn-replace-remote').addEventListener('click', async () => {
+  if (!confirm(
+    'Remplacer le coffre en ligne par celui de cet appareil ?'
+    + NL2
+    + "La copie en ligne ne s'ouvre pas : elle est corrompue ou chiffrée avec "
+    + 'une autre phrase. Elle sera écrasée par le coffre de cet appareil, qui '
+    + "lui s'ouvre normalement."
+    + NL2
+    + "Avant l'écrasement, une copie datée de ce qui est en ligne est déposée "
+    + "dans l'historique. Rien ne disparaît définitivement.")) return;
+
+  setSyncStatus('Remplacement…', 'busy');
+  try {
+    await remplacerDistant(db);
+    $('sync-fail-box').hidden = true;
+    $('sync-fail-repair').hidden = true;
+    setSyncStatus('Synchronisé', 'ok');
+  } catch (err) {
+    retenirErreurSync(err);
+    setSyncStatus(syncErrorMessage(err), 'warn');
+  }
 });
 
 $('btn-conflict-push').addEventListener('click', async () => {

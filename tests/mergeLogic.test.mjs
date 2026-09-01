@@ -30,7 +30,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
-import { createSyncState, syncVault } from '../js/mergeCycle.js';
+import { createSyncState, syncVault, CoffreDistantIllisible } from '../js/mergeCycle.js';
 import { argon2idAsync, argon2dAsync } from '../js/vendor/noble-hashes/argon2.js';
 
 // --- Chargement de kdbxweb sous Node ---------------------------------------
@@ -463,6 +463,51 @@ test('retirer la référence ne change rien aux scénarios couverts', async () =
   };
 
   assert.equal(await scénario(true), await scénario(false));
+});
+
+test('Coffre distant illisible', null);
+
+// Panne réelle du 2026-09-01 : la copie en ligne était corrompue (« invalid
+// gzip data »). Le cycle échouait à la lecture, à chaque enregistrement, sans
+// que rien ne distingue ce cas d'une coupure réseau — et surtout sans qu'on
+// puisse voir qu'aucun envoi n'aurait jamais lieu.
+test('un coffre distant illisible lève CoffreDistantIllisible', async () => {
+  let envois = 0;
+  const transport = {
+    download: async () => new ArrayBuffer(64),
+    upload: async () => { envois += 1; },
+  };
+
+  await assert.rejects(
+    () => syncVault({
+      db: {},
+      state: createSyncState(),
+      transport,
+      serialize: async () => new ArrayBuffer(8),
+      deserialize: async () => { throw new Error('invalid gzip data'); },
+    }),
+    (err) => err instanceof CoffreDistantIllisible,
+  );
+
+  // Le point qui compte : rien n'est envoyé. Écraser la copie en ligne doit
+  // rester une décision de l'utilisateur, jamais une conséquence d'un échec.
+  assert.equal(envois, 0, 'un envoi a eu lieu malgré un coffre distant illisible');
+});
+
+test('la cause d’origine est conservée', async () => {
+  const cause = new Error('invalid gzip data');
+  try {
+    await syncVault({
+      db: {},
+      state: createSyncState(),
+      transport: { download: async () => new ArrayBuffer(64), upload: async () => {} },
+      serialize: async () => new ArrayBuffer(8),
+      deserialize: async () => { throw cause; },
+    });
+    assert.fail('aurait dû lever');
+  } catch (err) {
+    assert.equal(err.cause, cause);
+  }
 });
 
 // --- Exécution --------------------------------------------------------------

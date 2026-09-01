@@ -10,7 +10,9 @@
 import { kdbxweb, openVault, saveVault } from './vaultCrypto.js';
 import { saveVaultBytes, getMeta, setMeta, META } from './vaultDb.js';
 import { createVaultTransport, isDenied, isOffline, isBlocked } from './vaultSync.js';
-import { syncVault } from './mergeCycle.js';
+import { syncVault, CoffreDistantIllisible } from './mergeCycle.js';
+
+export { CoffreDistantIllisible };
 import { sauvegarder } from './vaultBackup.js';
 import { currentUid } from './firebaseAuth.js';
 

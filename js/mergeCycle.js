@@ -21,6 +21,26 @@ export function createSyncState() {
 }
 
 /**
+ * Le coffre en ligne existe mais ne s'ouvre pas.
+ *
+ * Distinguer ce cas des autres pannes de synchronisation est ce qui permet de
+ * proposer la seule issue possible — remplacer la copie en ligne par celle de
+ * l'appareil. Sans ce type, l'erreur se noyait dans le repli générique, et le
+ * cycle échouait indéfiniment à la même ligne sans que rien ne l'indique.
+ *
+ * `cause` est conservée : elle seule dit si le fichier est corrompu (« invalid
+ * gzip data ») ou s'il est chiffré avec une autre phrase maîtresse — deux
+ * situations qui n'appellent pas la même décision.
+ */
+export class CoffreDistantIllisible extends Error {
+  constructor(cause) {
+    super('Le coffre en ligne existe mais ne s’ouvre pas.');
+    this.name = 'CoffreDistantIllisible';
+    this.cause = cause;
+  }
+}
+
+/**
  * Exécute un cycle complet.
  *
  * @param {object}   o
@@ -50,7 +70,14 @@ export async function syncVault({ db, state, transport, serialize, deserialize, 
     return { action: 'created', bytes };
   }
 
-  const remoteDb = await deserialize(remoteBytes);
+  // Un coffre distant illisible ne doit pas ressembler à une panne de réseau :
+  // c'est le seul cas où réessayer ne servira jamais à rien.
+  let remoteDb;
+  try {
+    remoteDb = await deserialize(remoteBytes);
+  } catch (err) {
+    throw new CoffreDistantIllisible(err);
+  }
 
   // Cœur du dispositif, dans cet ordre précis.
   //

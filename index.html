@@ -298,6 +298,24 @@
         <h3 class="rack-title">Dernier échec de synchronisation</h3>
         <p id="sync-fail-when" class="readout"></p>
         <pre id="sync-fail-detail" class="trace"></pre>
+
+        <!-- N'apparaît que si la copie en ligne est illisible : c'est le seul
+             cas où réessayer ne servira jamais à rien, et donc le seul où
+             écraser se justifie. -->
+        <div id="sync-fail-repair" hidden>
+          <p class="note note-alert">
+            La copie en ligne ne s'ouvre pas. Tant qu'elle est là, aucune
+            synchronisation ne peut aboutir.
+          </p>
+          <button type="button" id="btn-replace-remote" class="key key-danger key-block">
+            Remplacer le coffre en ligne
+          </button>
+          <p class="note">
+            Le coffre de cet appareil sera envoyé à sa place. Ce qui est écrasé
+            part d'abord dans l'historique en ligne, daté.
+          </p>
+        </div>
+
         <p class="note">
           Votre coffre est intact sur cet appareil : un échec de synchronisation
           n'est jamais un échec d'enregistrement.
