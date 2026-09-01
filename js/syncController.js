@@ -190,6 +190,7 @@ export function codeIncident(err) {
     if (/key|password|clé/i.test(cause)) return 'SYNC-DISTANT-AUTRE-PHRASE';
     return 'SYNC-DISTANT-ILLISIBLE';
   }
+  if (err.name === 'CoffreFerme') return 'COFFRE-FERME';
   if (err.name === 'ConflitCoffre') return 'SYNC-DEUX-COFFRES';
   // kdbxweb refuse de fusionner deux objets de même identifiant. La fusion
   // s'arrête avant tout envoi : rien n'est écrasé, mais plus rien ne passe.

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="color-scheme" content="dark light">
+<title>Vérification — MySafer</title>
+<link rel="stylesheet" href="./css/style.css">
+<script src="./js/vendor/kdbxweb.min.js"></script>
+</head>
+
+<body>
+<!--
+  Banc d'essai. Il exerce les chemins qui font perdre des données, dans le vrai
+  navigateur, sur un coffre jetable créé pour l'occasion.
+
+  Ce qu'il ajoute aux tests Node : ceux-ci ne peuvent pas charger kdbxweb ni
+  Argon2 dans les conditions réelles, et c'est exactement là que le défaut du
+  2026-09-01 se cachait — deux sérialisations concurrentes du même coffre.
+
+  Il ne touche JAMAIS au coffre de l'utilisateur : il travaille en mémoire, sans
+  IndexedDB ni réseau. On peut le lancer sans risque, aussi souvent qu'on veut.
+-->
+
+<main class="screen screen-lock">
+  <div class="lock-card unit">
+    <div class="unit-head">
+      <h1 class="unit-name">Vérification</h1>
+      <p class="unit-ref">Banc d'essai · coffre jetable</p>
+    </div>
+
+    <p class="readout">
+      Exerce les chemins qui font perdre des données, sur un coffre créé pour
+      l'occasion. Votre coffre n'est ni lu ni modifié.
+    </p>
+
+    <button type="button" id="lancer" class="key key-action key-block">Lancer la vérification</button>
+
+    <p id="resume" class="readout" role="status" hidden></p>
+    <pre id="journal" class="trace" hidden></pre>
+
+    <p class="note"><a href="./index.html">Retour au coffre</a></p>
+  </div>
+</main>
+
+<script type="module" src="./js/verification.js"></script>
+</body>
+</html>

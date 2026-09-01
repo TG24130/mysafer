@@ -167,6 +167,35 @@ Un test qui s'exécute d'un trait fait tout tomber dans la même seconde : les
 temps sont à égalité, la fusion ne peut pas trancher, et la divergence paraît
 permanente. Les tests datent donc tout explicitement.
 
+### Deux choses ne doivent jamais toucher le coffre en même temps
+
+`db.save()` de kdbxweb n'est pas réentrante. Deux appels entrelacés produisent
+un fichier dont l'en-tête ne correspond plus au corps — mesuré sur Chromium :
+`InvalidState: no xml`, et à la lecture suivante « invalid gzip data ». C'est ce
+qui a corrompu le coffre en ligne deux fois le 2026-09-01, chaque fois après
+plusieurs saisies rapprochées : un enregistrement partait pendant qu'un cycle
+de synchronisation sérialisait déjà.
+
+**Toute opération qui sérialise ou fusionne passe par `surCeCoffre()`**
+(`js/fileDAttente.js`). Elle sérialise les accès et refuse le travail si le
+coffre a été verrouillé pendant l'attente — la file allonge le délai entre la
+demande et l'exécution, et cinq minutes d'inactivité peuvent tomber au milieu.
+Ne jamais appeler `saveVault(db)` ni `db.merge()` en dehors.
+
+### Vérifier avant de déployer, pas après
+
+`verification.html` exerce dans le vrai navigateur ce qu'aucun test Node ne
+peut atteindre : kdbxweb et Argon2 en conditions réelles, la concurrence,
+la fusion, le refus des tampons invalides. Environ 35 s, sur un coffre jetable
+en mémoire — ni IndexedDB, ni réseau, ni contact avec le coffre de
+l'utilisateur.
+
+Le témoin de concurrence y consigne ce que donne une sérialisation simultanée
+sans file : c'est la trace expérimentale du défaut, et elle dirait si une
+version future de kdbxweb changeait de comportement.
+
+À lancer après chaque déploiement notable, en plus de `npm test`.
+
 ### Devant une panne, lire les points de contrôle avant de chercher
 
 Réglages ▸ **État et diagnostic** donne en une fois : version exécutée, coffre

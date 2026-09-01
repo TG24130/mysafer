@@ -47,7 +47,7 @@ const NL2 = '\n\n';
 // journée de diagnostic s'est perdue à ne pas pouvoir répondre à « quelle
 // version tourne ? » : le cache du navigateur et le service worker peuvent
 // servir des modules d'âges différents, et rien ne le disait.
-const VERSION = '2026-09-01.11';
+const VERSION = '2026-09-01.12';
 
 // ---------------------------------------------------------------------------
 // État
@@ -75,6 +75,36 @@ let detachActivity = null;
 // eux, jamais d'un enregistrement lancé pendant l'un d'eux — et c'est
 // précisément ce que fait quelqu'un qui saisit plusieurs entrées de suite.
 const surLeCoffre = creerFile();
+
+/**
+ * Signale un travail abandonné parce que le coffre a été fermé entre-temps.
+ * Reconnaissable pour ne pas être présenté comme une panne : ce n'en est pas
+ * une, c'est un verrouillage qui est arrivé le premier.
+ */
+class CoffreFerme extends Error {
+  constructor() {
+    super('Coffre verrouillé avant la fin de l’opération.');
+    this.name = 'CoffreFerme';
+  }
+}
+
+/**
+ * Enfile un travail, en refusant de l'exécuter si le coffre a changé.
+ *
+ * La file allonge le délai entre la demande et l'exécution : un
+ * verrouillage — bouton, ou cinq minutes d'inactivité — peut tomber entre
+ * les deux. Sans cette garde, le travail s'exécuterait sur un coffre fermé,
+ * `db` valant alors null, ou pire sur celui qui vient d'être ouvert à sa
+ * place. Le coffre visé est capturé à l'enfilement et revérifié juste avant
+ * de commencer.
+ */
+function surCeCoffre(travail) {
+  const vise = db;
+  return surLeCoffre(() => {
+    if (!vise || db !== vise) throw new CoffreFerme();
+    return travail(vise);
+  });
+}
 let countdownHandle = null;
 
 // ---------------------------------------------------------------------------
@@ -237,7 +267,8 @@ onStateChange((s) => {
 // ---------------------------------------------------------------------------
 
 async function persist() {
-  await surLeCoffre(async () => {
+  try {
+    await surCeCoffre(async () => {
   const bytes = await saveVault(db);
   try {
     await saveVaultBytes(bytes);
@@ -254,7 +285,13 @@ async function persist() {
   }
   await setMeta(META.LAST_SAVE, Date.now());
   alerteEcritureLocale(null);
-  });
+    });
+  } catch (err) {
+    // Le coffre a été verrouillé avant que le tour vienne : il n'y a rien
+    // à écrire, et rien à signaler non plus.
+    if (!err || err.name !== 'CoffreFerme') throw err;
+    return;
+  }
 
   // Hors du verrou : la synchronisation le reprendra elle-même, et le
   // garder ici ferait attendre l'enregistrement suivant tout le temps du
@@ -456,7 +493,7 @@ async function syncInBackground() {
   syncing = true;
   setSyncStatus('Synchronisation…', 'busy');
   try {
-    await surLeCoffre(() => syncNow(db));
+    await surCeCoffre((coffre) => syncNow(coffre));
     setSyncStatus('Synchronisé', 'ok');
     majEtat();
     // Le coffre a pu changer par la fusion : réafficher plutôt que laisser une
@@ -464,6 +501,10 @@ async function syncInBackground() {
     renderGroups();
     renderEntries();
   } catch (err) {
+    // Verrouillage arrivé pendant l'attente : ce n'est pas une panne, et
+    // l'afficher en alarmerait sans raison. La modification, elle, a déjà
+    // été écrite localement avant que le cycle ne parte.
+    if (err && err.name === 'CoffreFerme') { setSyncStatus(''); return; }
     if (err instanceof ConflitCoffre) {
       // Rien d'automatique ici : les deux issues détruisent un coffre.
       octetsEnConflit = err.octetsDistants;
@@ -514,7 +555,7 @@ $('btn-replace-remote').addEventListener('click', async () => {
 
   setSyncStatus('Remplacement…', 'busy');
   try {
-    await surLeCoffre(() => remplacerDistant(db));
+    await surCeCoffre((coffre) => remplacerDistant(coffre));
     $('sync-fail-box').hidden = true;
     $('sync-fail-repair').hidden = true;
     setSyncStatus('Synchronisé', 'ok');
@@ -531,7 +572,7 @@ $('btn-conflict-push').addEventListener('click', async () => {
 
   setSyncStatus('Remplacement…', 'busy');
   try {
-    await surLeCoffre(() => remplacerDistant(db));
+    await surCeCoffre((coffre) => remplacerDistant(coffre));
     octetsEnConflit = null;
     $('sync-conflict').hidden = true;
     setSyncStatus('Synchronisé', 'ok');
