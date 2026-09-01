@@ -1,6 +1,6 @@
 # Reprise de session — MySafer
 
-Dernière session : **2026-08-29**.
+Dernière session : **2026-09-01**.
 
 À lire en premier au démarrage d'une session. Ce fichier dit **l'état, les
 décisions et les pièges** — pas l'histoire de leur découverte. Le détail
@@ -27,7 +27,7 @@ réel du code trois fois en une journée.
 npm test
 ```
 
-Six suites, **96 tests**. Site en ligne : **https://tg24130.github.io/mysafer/**
+Huit suites, **110 tests**, plus `verification.html` dans le navigateur. Site en ligne : **https://tg24130.github.io/mysafer/**
 Dépôt public `TG24130/mysafer`, GitHub Pages depuis `main`, racine.
 
 ---
@@ -60,17 +60,19 @@ d'emploi imprimable dans `docs/`.
 
 ## Reste à faire
 
-1. **Vérifier la suppression de répertoire sur un vrai appareil.** Écrite et
-   publiée, syntaxe et tests au vert, mais jamais exécutée : le panneau
-   navigateur s'est mis à bloquer toutes les ressources locales en fin de
-   session. C'est le seul point non éprouvé du projet.
-2. **Effacer le coffre local** n'est possible que par la console du navigateur
+1. **Observer la synchronisation quelques jours.** La journée du 2026-09-01 a
+   corrompu deux fois la copie en ligne avant qu'on n'en trouve la cause. Le
+   correctif est en place et éprouvé, mais c'est l'usage réel qui tranchera.
+   Ne pas ajouter de fonctionnalité pendant cette période.
+2. **Vérifier la suppression de répertoire sur un vrai appareil.** Écrite et
+   publiée, syntaxe et tests au vert, mais jamais exécutée.
+3. **Effacer le coffre local** n'est possible que par la console du navigateur
    (`indexedDB.deleteDatabase('coffre_db')`). `destroyLocalVault()` existe dans
    `vaultDb.js` mais n'est branché sur aucun bouton.
-3. **Vérifications manuelles en attente** : ouvrir un `.kdbx` exporté dans
+4. **Vérifications manuelles en attente** : ouvrir un `.kdbx` exporté dans
    **KeePassDX sur Android** (KeePassXC est fait, sur PC), et lancer le
    diagnostic PRF sur d'autres appareils avant de les enrôler.
-4. **Le tri ne concerne que les entrées.** Les répertoires se rangent au doigt,
+5. **Le tri ne concerne que les entrées.** Les répertoires se rangent au doigt,
    sans bouton. Le mécanisme serait le même si le besoin apparaît.
 
 ---
@@ -107,7 +109,8 @@ navigateur ni du réseau, pour être testable sous Node.**
 
 | Module | Rôle | Testable |
 |---|---|---|
-| `vaultModel.js` | lecture du contenu, fonctions pures | oui (28) |
+| `vaultModel.js` | lecture du contenu, fonctions pures | oui (30) |
+| `fileDAttente.js` | un seul accès au coffre à la fois | oui (6) |
 | `generator.js` | génération de secrets | oui (20) |
 | `lockTimer.js` | inactivité, visibilité | oui (18) |
 | `mergeCycle.js` | cycle de fusion, transport injecté | oui (10) |
@@ -195,6 +198,17 @@ sans file : c'est la trace expérimentale du défaut, et elle dirait si une
 version future de kdbxweb changeait de comportement.
 
 À lancer après chaque déploiement notable, en plus de `npm test`.
+
+### Des octets en attente ne s'ouvrent qu'à la phrase
+
+Le déverrouillage biométrique ouvre le coffre **déjà présent** sur l'appareil.
+Devant des octets en attente — coffre récupéré en ligne, fichier importé,
+reprise après conflit — il rouvrait l'ancien et annulait la reprise en silence.
+Le bouton est donc masqué tant qu'une installation est en attente.
+
+Le défaut dormait depuis la phase 5 : le seul cas où des octets attendent était
+un appareil neuf, où la biométrie n'est pas encore enrôlée. Il a fallu un
+appareil déjà enrôlé qui reprend un coffre pour le déclencher.
 
 ### Devant une panne, lire les points de contrôle avant de chercher
 
