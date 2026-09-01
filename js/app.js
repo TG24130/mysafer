@@ -47,7 +47,7 @@ const NL2 = '\n\n';
 // journée de diagnostic s'est perdue à ne pas pouvoir répondre à « quelle
 // version tourne ? » : le cache du navigateur et le service worker peuvent
 // servir des modules d'âges différents, et rien ne le disait.
-const VERSION = '2026-09-01.13';
+const VERSION = '2026-09-01.14';
 
 // ---------------------------------------------------------------------------
 // État
@@ -1701,7 +1701,12 @@ function setBioErreur(msg) {
 
 /** Écran de verrouillage : proposer le raccourci si cet appareil est enrôlé. */
 async function majBioDeverrouillage() {
-  const dispo = (await estEnrole()) && (await biometrieDisponible());
+  // Un coffre attend d'être installé : le déverrouillage biométrique
+  // rouvrirait celui déjà présent sur l'appareil, et la reprise serait
+  // annulée sans que rien ne le dise. Seule la phrase peut adopter des
+  // octets en attente — c'est elle qui prouve qu'ils s'ouvrent.
+  const dispo = !octetsAInstaller
+    && (await estEnrole()) && (await biometrieDisponible());
   $('btn-bio-unlock').hidden = !dispo;
   $('bio-sep').hidden = !dispo;
 }
