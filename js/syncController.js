@@ -191,6 +191,9 @@ export function codeIncident(err) {
     return 'SYNC-DISTANT-ILLISIBLE';
   }
   if (err.name === 'ConflitCoffre') return 'SYNC-DEUX-COFFRES';
+  // kdbxweb refuse de fusionner deux objets de même identifiant. La fusion
+  // s'arrête avant tout envoi : rien n'est écrasé, mais plus rien ne passe.
+  if (/MergeError/.test(err.message || '')) return 'SYNC-FUSION-DOUBLON';
   if (isOffline(err)) return 'RESEAU-ABSENT';
   if (isBlocked(err)) return 'CORS-NON-AUTORISE';
   if (isDenied(err)) return 'ACCES-REFUSE';

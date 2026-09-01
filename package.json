@@ -7,6 +7,6 @@
     "@xmldom/xmldom": "0.8.10"
   },
   "scripts": {
-    "test": "node tests/generator.test.mjs && node tests/vaultModel.test.mjs && node tests/lockTimer.test.mjs && node tests/mergeLogic.test.mjs && node tests/backupPolicy.test.mjs && node tests/keyWrap.test.mjs && node tests/deployPaths.test.mjs"
+    "test": "node tests/generator.test.mjs && node tests/vaultModel.test.mjs && node tests/lockTimer.test.mjs && node tests/mergeLogic.test.mjs && node tests/backupPolicy.test.mjs && node tests/keyWrap.test.mjs && node tests/deployPaths.test.mjs && node tests/fileDAttente.test.mjs"
   }
 }

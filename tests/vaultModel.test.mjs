@@ -10,7 +10,7 @@
 import assert from 'node:assert/strict';
 import {
   fieldText, groupName, flattenGroups, entriesOf, allEntries,
-  sortByTitle, searchEntries, normalize, customFields, urlHost,
+  sortByTitle, searchEntries, normalize, customFields, urlHost, uuidsEnDouble,
 } from '../js/vaultModel.js';
 
 let ok = 0;
@@ -145,6 +145,21 @@ test('allEntries rattache chaque entrée à son groupe', () => {
 });
 
 console.log('\nTri');
+
+test('un coffre sain n’a aucun doublon d’identifiant', () => {
+  assert.deepEqual(uuidsEnDouble(db), []);
+});
+
+// kdbxweb refuse de fusionner un coffre où un identifiant désigne deux
+// objets — « MergeError: duplicate » — et la synchronisation s'arrête net.
+test('une entrée atteignable depuis deux groupes est signalée', () => {
+  const partagee = entry({ Title: 'Doublon' });
+  partagee.uuid = 'uuid-partage';
+  const a1 = group('A', { entries: [partagee] });
+  const b1 = group('B', { entries: [partagee] });
+  const r = group('Coffre', { groups: [a1, b1] });
+  assert.deepEqual(uuidsEnDouble(database([r])), ['uuid-partage']);
+});
 
 test('les accents sont classés comme la lettre de base', () => {
   const rows = [

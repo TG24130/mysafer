@@ -13,11 +13,13 @@ import {
 import {
   fieldText, groupName, flattenGroups, entriesOf, allEntries,
   sortByTitle, searchEntries, customFields, urlHost, FIELDS, POSTAL_FIELDS,
+  uuidsEnDouble,
 } from './vaultModel.js';
 import { generatePassphrase, generatePassword, passphraseBits, passwordBits } from './generator.js';
 import { createLockTimer, attachActivityListeners, DEFAULT_TIMEOUT_MS } from './lockTimer.js';
 import { copySecret, clearNow, cancelPendingClear, onStateChange, stateMessage } from './clipboard.js';
 import { rendreReordonnable, rendreReordonnableAuClavier } from './dragOrder.js';
+import { creerFile } from './fileDAttente.js';
 import { signIn, signOutUser, onAuthChange, authState } from './firebaseAuth.js';
 import {
   syncNow, downloadRemoteVault, adoptRemoteVault, canSync, syncErrorMessage,
@@ -45,7 +47,7 @@ const NL2 = '\n\n';
 // journée de diagnostic s'est perdue à ne pas pouvoir répondre à « quelle
 // version tourne ? » : le cache du navigateur et le service worker peuvent
 // servir des modules d'âges différents, et rien ne le disait.
-const VERSION = '2026-09-01.7';
+const VERSION = '2026-09-01.8';
 
 // ---------------------------------------------------------------------------
 // État
@@ -65,6 +67,14 @@ const lockTimer = createLockTimer({
   onLock: () => lockVault('inactivité'),
 });
 let detachActivity = null;
+
+// Toute opération qui sérialise ou fusionne le coffre passe par ici.
+// `db.save()` de kdbxweb n'est pas réentrante : deux appels entrelacés
+// produisent un fichier dont l'en-tête ne correspond plus au corps. Le
+// verrou `syncing` ne protégeait que les cycles de synchronisation entre
+// eux, jamais d'un enregistrement lancé pendant l'un d'eux — et c'est
+// précisément ce que fait quelqu'un qui saisit plusieurs entrées de suite.
+const surLeCoffre = creerFile();
 let countdownHandle = null;
 
 // ---------------------------------------------------------------------------
@@ -227,6 +237,7 @@ onStateChange((s) => {
 // ---------------------------------------------------------------------------
 
 async function persist() {
+  await surLeCoffre(async () => {
   const bytes = await saveVault(db);
   try {
     await saveVaultBytes(bytes);
@@ -243,9 +254,11 @@ async function persist() {
   }
   await setMeta(META.LAST_SAVE, Date.now());
   alerteEcritureLocale(null);
-  // La synchronisation part en arrière-plan et n'est jamais attendue : le
-  // coffre local est déjà enregistré à cette ligne, l'enregistrement ne doit
-  // pas dépendre du réseau.
+  });
+
+  // Hors du verrou : la synchronisation le reprendra elle-même, et le
+  // garder ici ferait attendre l'enregistrement suivant tout le temps du
+  // cycle réseau.
   syncInBackground();
 }
 
@@ -295,6 +308,10 @@ async function releverEtat() {
     ? (navigator.serviceWorker.controller ? 'actif' : 'inactif')
     : 'non géré';
 
+  // Un identifiant en double empêche toute fusion. Savoir s'il est dans le
+  // coffre local ou dans celui en ligne décide de la réparation.
+  const doubles = db ? uuidsEnDouble(db) : null;
+
   const [derniereEcriture, derniereSync, dernierExport] = await Promise.all([
     getMeta(META.LAST_SAVE), lastSyncAt(), getMeta(META.LAST_EXPORT),
   ]);
@@ -313,6 +330,9 @@ async function releverEtat() {
     ['Compte', authState.currentUser ? authState.currentUser.email : 'non connecté', false],
     ['Réseau', navigator.onLine === false ? 'hors ligne' : 'en ligne', navigator.onLine === false],
     ['Service worker', sw, sw !== 'actif'],
+    ['Identifiants en double', doubles === null ? '—'
+      : (doubles.length === 0 ? 'aucun' : doubles.length + ' — coffre LOCAL'),
+      Boolean(doubles && doubles.length)],
     ['Dernier incident',
       dernierIncident ? dernierIncident.code + ' — ' + depuisQuand(dernierIncident.quand) : 'aucun',
       Boolean(dernierIncident)],
@@ -415,7 +435,7 @@ async function syncInBackground() {
   syncing = true;
   setSyncStatus('Synchronisation…', 'busy');
   try {
-    await syncNow(db);
+    await surLeCoffre(() => syncNow(db));
     setSyncStatus('Synchronisé', 'ok');
     majEtat();
     // Le coffre a pu changer par la fusion : réafficher plutôt que laisser une
@@ -473,7 +493,7 @@ $('btn-replace-remote').addEventListener('click', async () => {
 
   setSyncStatus('Remplacement…', 'busy');
   try {
-    await remplacerDistant(db);
+    await surLeCoffre(() => remplacerDistant(db));
     $('sync-fail-box').hidden = true;
     $('sync-fail-repair').hidden = true;
     setSyncStatus('Synchronisé', 'ok');
@@ -490,7 +510,7 @@ $('btn-conflict-push').addEventListener('click', async () => {
 
   setSyncStatus('Remplacement…', 'busy');
   try {
-    await remplacerDistant(db);
+    await surLeCoffre(() => remplacerDistant(db));
     octetsEnConflit = null;
     $('sync-conflict').hidden = true;
     setSyncStatus('Synchronisé', 'ok');

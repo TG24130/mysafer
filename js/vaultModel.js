@@ -115,6 +115,43 @@ export function entriesOf(db, group, recursive = true) {
   return out;
 }
 
+/**
+ * Identifiants apparaissant plus d'une fois dans le coffre.
+ *
+ * kdbxweb refuse de fusionner un coffre où un même identifiant désigne deux
+ * objets — « MergeError: duplicate » — et la synchronisation s'arrête net.
+ * Savoir si le doublon est du côté local ou du côté distant décide de la
+ * réparation ; sans ce contrôle, la question restait sans réponse.
+ *
+ * Le parcours inclut la corbeille et les sous-groupes : un doublon y compte
+ * autant qu'ailleurs pour la fusion.
+ *
+ * @returns {string[]} identifiants en double, sans répétition
+ */
+export function uuidsEnDouble(db) {
+  const vus = new Set();
+  const doubles = new Set();
+
+  const noter = (uuid) => {
+    // Un objet sans identifiant ne peut pas provoquer de collision : kdbxweb
+    // en attribue un à la création. L'ignorer évite de compter deux absences
+    // comme un doublon.
+    if (!uuid) return;
+    const cle = String(uuid);
+    if (vus.has(cle)) doubles.add(cle);
+    else vus.add(cle);
+  };
+
+  const parcourir = (groupe) => {
+    noter(groupe.uuid);
+    for (const e of groupe.entries) noter(e.uuid);
+    for (const sous of groupe.groups) parcourir(sous);
+  };
+
+  for (const racine of db.groups) parcourir(racine);
+  return [...doubles];
+}
+
 /** Toutes les entrées du coffre, hors corbeille. */
 export function allEntries(db) {
   const out = [];
